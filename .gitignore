@@ -24,6 +24,10 @@ dist/
 *.dSYM/
 *.xcarchive/
 
+# Local icon source/generator
+/ccas.png
+/scripts/generate_icons.sh
+
 # Logs and local env
 *.log
 .env

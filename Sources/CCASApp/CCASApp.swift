@@ -13,8 +13,10 @@ struct CCASApp: App {
     @StateObject private var viewModel = AccountSwitcherViewModel()
 
     var body: some Scene {
-        MenuBarExtra("CCAS", systemImage: "person.2.badge.gearshape") {
+        MenuBarExtra {
             MenuContentView(viewModel: viewModel)
+        } label: {
+            Image(nsImage: AppAssets.menuBarIcon())
         }
         .menuBarExtraStyle(.window)
     }

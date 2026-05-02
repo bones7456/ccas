@@ -73,10 +73,12 @@ struct MenuContentView: View {
         HStack(spacing: 10) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.accentColor.opacity(0.15))
-                Image(systemName: "person.2.badge.gearshape")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                Image(nsImage: AppAssets.appIcon(size: 34))
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .padding(2)
             }
             .frame(width: 38, height: 38)
 
