@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 import Security
 
 struct KeychainPasswordItem {
@@ -8,10 +7,10 @@ struct KeychainPasswordItem {
 }
 
 final class KeychainClient {
-    private let logger = Logger(subsystem: "li.luy.ccas", category: "Keychain")
+    private let logger = DebugLogger(category: "Keychain")
 
     func readGenericPasswordItem(service: String) throws -> KeychainPasswordItem? {
-        logger.notice("read item service=\(service, privacy: .public)")
+        logger.notice("read item service=\(service)")
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -25,12 +24,12 @@ final class KeychainClient {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
 
         if status == errSecItemNotFound {
-            logger.notice("read item service=\(service, privacy: .public) status=notFound")
+            logger.notice("read item service=\(service) status=notFound")
             return nil
         }
 
         guard status == errSecSuccess else {
-            logger.error("read item service=\(service, privacy: .public) status=\(Int(status), privacy: .public) message=\(Self.message(for: status), privacy: .public)")
+            logger.error("read item service=\(service) status=\(Int(status)) message=\(Self.message(for: status))")
             throw AccountSwitcherError.keychain(Self.message(for: status))
         }
 
@@ -39,18 +38,18 @@ final class KeychainClient {
             let data = item[kSecValueData as String] as? Data,
             let password = String(data: data, encoding: .utf8)
         else {
-            logger.notice("read item service=\(service, privacy: .public) status=success emptyResult=true")
+            logger.notice("read item service=\(service) status=success emptyResult=true")
             return nil
         }
 
         let account = item[kSecAttrAccount as String] as? String
-        logger.notice("read item service=\(service, privacy: .public) status=success account=\((account ?? "<empty>"), privacy: .public)")
+        logger.notice("read item service=\(service) status=success hasAccount=\((account?.isEmpty == false))")
         return KeychainPasswordItem(account: account?.isEmpty == false ? account! : NSUserName(), password: password)
     }
 
     func readGenericPassword(service: String, account: String? = nil) throws -> String? {
-        let accountLabel = account ?? "<any>"
-        logger.notice("read password service=\(service, privacy: .public) account=\(accountLabel, privacy: .public)")
+        let hasAccountFilter = account != nil
+        logger.notice("read password service=\(service) hasAccountFilter=\(hasAccountFilter)")
 
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -67,26 +66,26 @@ final class KeychainClient {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
 
         if status == errSecItemNotFound {
-            logger.notice("read password service=\(service, privacy: .public) account=\(accountLabel, privacy: .public) status=notFound")
+            logger.notice("read password service=\(service) hasAccountFilter=\(hasAccountFilter) status=notFound")
             return nil
         }
 
         guard status == errSecSuccess else {
-            logger.error("read password service=\(service, privacy: .public) account=\(accountLabel, privacy: .public) status=\(Int(status), privacy: .public) message=\(Self.message(for: status), privacy: .public)")
+            logger.error("read password service=\(service) hasAccountFilter=\(hasAccountFilter) status=\(Int(status)) message=\(Self.message(for: status))")
             throw AccountSwitcherError.keychain(Self.message(for: status))
         }
 
         guard let data = result as? Data else {
-            logger.notice("read password service=\(service, privacy: .public) account=\(accountLabel, privacy: .public) status=success emptyResult=true")
+            logger.notice("read password service=\(service) hasAccountFilter=\(hasAccountFilter) status=success emptyResult=true")
             return nil
         }
 
-        logger.notice("read password service=\(service, privacy: .public) account=\(accountLabel, privacy: .public) status=success")
+        logger.notice("read password service=\(service) hasAccountFilter=\(hasAccountFilter) status=success")
         return String(data: data, encoding: .utf8)
     }
 
     func upsertGenericPassword(service: String, account: String, password: String) throws {
-        logger.notice("upsert password service=\(service, privacy: .public) account=\(account, privacy: .public)")
+        logger.notice("upsert password service=\(service)")
 
         guard let data = password.data(using: .utf8) else {
             throw AccountSwitcherError.keychain(L10n.string(.errorCredentialEncoding))
@@ -104,12 +103,12 @@ final class KeychainClient {
 
         let updateStatus = SecItemUpdate(query as CFDictionary, update as CFDictionary)
         if updateStatus == errSecSuccess {
-            logger.notice("upsert password service=\(service, privacy: .public) account=\(account, privacy: .public) status=updated")
+            logger.notice("upsert password service=\(service) status=updated")
             return
         }
 
         guard updateStatus == errSecItemNotFound else {
-            logger.error("upsert password service=\(service, privacy: .public) account=\(account, privacy: .public) updateStatus=\(Int(updateStatus), privacy: .public) message=\(Self.message(for: updateStatus), privacy: .public)")
+            logger.error("upsert password service=\(service) updateStatus=\(Int(updateStatus)) message=\(Self.message(for: updateStatus))")
             throw AccountSwitcherError.keychain(Self.message(for: updateStatus))
         }
 
@@ -119,14 +118,14 @@ final class KeychainClient {
 
         let addStatus = SecItemAdd(add as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
-            logger.error("upsert password service=\(service, privacy: .public) account=\(account, privacy: .public) addStatus=\(Int(addStatus), privacy: .public) message=\(Self.message(for: addStatus), privacy: .public)")
+            logger.error("upsert password service=\(service) addStatus=\(Int(addStatus)) message=\(Self.message(for: addStatus))")
             throw AccountSwitcherError.keychain(Self.message(for: addStatus))
         }
-        logger.notice("upsert password service=\(service, privacy: .public) account=\(account, privacy: .public) status=added")
+        logger.notice("upsert password service=\(service) status=added")
     }
 
     func upsertGenericPasswordForService(service: String, fallbackAccount: String, password: String) throws {
-        logger.notice("upsert password by service service=\(service, privacy: .public) fallbackAccount=\(fallbackAccount, privacy: .public)")
+        logger.notice("upsert password by service service=\(service) hasFallbackAccount=\((!fallbackAccount.isEmpty))")
 
         guard let data = password.data(using: .utf8) else {
             throw AccountSwitcherError.keychain(L10n.string(.errorCredentialEncoding))
@@ -143,12 +142,12 @@ final class KeychainClient {
 
         let updateStatus = SecItemUpdate(query as CFDictionary, update as CFDictionary)
         if updateStatus == errSecSuccess {
-            logger.notice("upsert password by service service=\(service, privacy: .public) status=updated")
+            logger.notice("upsert password by service service=\(service) status=updated")
             return
         }
 
         guard updateStatus == errSecItemNotFound else {
-            logger.error("upsert password by service service=\(service, privacy: .public) updateStatus=\(Int(updateStatus), privacy: .public) message=\(Self.message(for: updateStatus), privacy: .public)")
+            logger.error("upsert password by service service=\(service) updateStatus=\(Int(updateStatus)) message=\(Self.message(for: updateStatus))")
             throw AccountSwitcherError.keychain(Self.message(for: updateStatus))
         }
 
@@ -159,15 +158,15 @@ final class KeychainClient {
 
         let addStatus = SecItemAdd(add as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
-            logger.error("upsert password by service service=\(service, privacy: .public) fallbackAccount=\(fallbackAccount, privacy: .public) addStatus=\(Int(addStatus), privacy: .public) message=\(Self.message(for: addStatus), privacy: .public)")
+            logger.error("upsert password by service service=\(service) hasFallbackAccount=\((!fallbackAccount.isEmpty)) addStatus=\(Int(addStatus)) message=\(Self.message(for: addStatus))")
             throw AccountSwitcherError.keychain(Self.message(for: addStatus))
         }
 
-        logger.notice("upsert password by service service=\(service, privacy: .public) status=added fallbackAccount=\(fallbackAccount, privacy: .public)")
+        logger.notice("upsert password by service service=\(service) status=added hasFallbackAccount=\((!fallbackAccount.isEmpty))")
     }
 
     func deleteGenericPassword(service: String, account: String) throws {
-        logger.notice("delete password service=\(service, privacy: .public) account=\(account, privacy: .public)")
+        logger.notice("delete password service=\(service)")
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -177,11 +176,11 @@ final class KeychainClient {
 
         let status = SecItemDelete(query as CFDictionary)
         if status == errSecSuccess || status == errSecItemNotFound {
-            logger.notice("delete password service=\(service, privacy: .public) account=\(account, privacy: .public) status=\(status == errSecSuccess ? "deleted" : "notFound", privacy: .public)")
+            logger.notice("delete password service=\(service) status=\(status == errSecSuccess ? "deleted" : "notFound")")
             return
         }
 
-        logger.error("delete password service=\(service, privacy: .public) account=\(account, privacy: .public) status=\(Int(status), privacy: .public) message=\(Self.message(for: status), privacy: .public)")
+        logger.error("delete password service=\(service) status=\(Int(status)) message=\(Self.message(for: status))")
         throw AccountSwitcherError.keychain(Self.message(for: status))
     }
 

@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 import SwiftUI
 
 enum StatusMessage: Equatable {
@@ -39,7 +38,7 @@ final class AccountSwitcherViewModel: ObservableObject {
     @Published var isBusy = false
 
     private let store: ClaudeAccountStore
-    private let logger = Logger(subsystem: "li.luy.ccas", category: "ViewModel")
+    private let logger = DebugLogger(category: "ViewModel")
 
     init(store: ClaudeAccountStore = ClaudeAccountStore()) {
         self.store = store
@@ -85,7 +84,7 @@ final class AccountSwitcherViewModel: ObservableObject {
             } else if self.statusMessage == .noAccounts {
                 self.statusMessage = .none
             }
-            self.logger.notice("refresh completed accountCount=\(self.accounts.count, privacy: .public) currentEmail=\((self.currentIdentity?.email ?? "<none>"), privacy: .public)")
+            self.logger.notice("refresh completed accountCount=\(self.accounts.count) hasCurrentIdentity=\((self.currentIdentity != nil))")
         }
     }
 
@@ -102,15 +101,15 @@ final class AccountSwitcherViewModel: ObservableObject {
             case .updated(let account):
                 self.statusMessage = .updatedExisting(account.number)
             }
-            self.logger.notice("add account completed currentEmail=\((self.currentIdentity?.email ?? "<none>"), privacy: .public) accountCount=\(self.accounts.count, privacy: .public)")
+            self.logger.notice("add account completed accountCount=\(self.accounts.count) hasCurrentIdentity=\((self.currentIdentity != nil))")
         }
     }
 
     func switchTo(_ account: ManagedAccount) {
-        logger.notice("switch requested number=\(account.number, privacy: .public) email=\(account.record.email, privacy: .public) isActive=\(account.isActive, privacy: .public)")
+        logger.notice("switch requested number=\(account.number) isActive=\(account.isActive)")
         guard !account.isActive else {
             statusMessage = .alreadyCurrent
-            logger.notice("switch skipped alreadyActive number=\(account.number, privacy: .public)")
+            logger.notice("switch skipped alreadyActive number=\(account.number)")
             return
         }
 
@@ -119,7 +118,7 @@ final class AccountSwitcherViewModel: ObservableObject {
             self.currentIdentity = try self.store.currentIdentity()
             self.accounts = try self.store.listAccounts()
             self.statusMessage = .switched(account.number)
-            self.logger.notice("switch completed number=\(account.number, privacy: .public) currentEmail=\((self.currentIdentity?.email ?? "<none>"), privacy: .public)")
+            self.logger.notice("switch completed number=\(account.number) hasCurrentIdentity=\((self.currentIdentity != nil))")
         }
     }
 
@@ -130,7 +129,7 @@ final class AccountSwitcherViewModel: ObservableObject {
             do {
                 try action()
             } catch {
-                self.logger.error("operation failed error=\(error.localizedDescription, privacy: .public)")
+                self.logger.error("operation failed errorType=\(String(describing: type(of: error)))")
                 statusMessage = .error(error.localizedDescription)
             }
             self.logger.notice("operation end")

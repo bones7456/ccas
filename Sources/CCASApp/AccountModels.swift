@@ -1,5 +1,33 @@
 import Foundation
 
+struct DebugLogger {
+    #if DEBUG
+    private let category: String
+
+    init(category: String) {
+        self.category = category
+    }
+
+    @inline(__always)
+    func notice(_ message: @autoclosure () -> String) {
+        NSLog("[CCAS][\(category)] \(message())")
+    }
+
+    @inline(__always)
+    func error(_ message: @autoclosure () -> String) {
+        NSLog("[CCAS][\(category)] ERROR \(message())")
+    }
+    #else
+    init(category: String) {}
+
+    @inline(__always)
+    func notice(_ message: @autoclosure () -> String) {}
+
+    @inline(__always)
+    func error(_ message: @autoclosure () -> String) {}
+    #endif
+}
+
 struct AccountRecord: Codable, Equatable {
     var email: String
     var uuid: String
