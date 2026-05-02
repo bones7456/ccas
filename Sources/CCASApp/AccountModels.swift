@@ -116,7 +116,7 @@ struct ManagedAccount: Identifiable, Equatable {
     }
 }
 
-enum ClaudeSubscriptionPlan: String, Equatable {
+enum ClaudeSubscriptionPlan: String, Codable, Equatable {
     case pro
     case max
     case team
@@ -152,14 +152,25 @@ enum ClaudeSubscriptionPlan: String, Equatable {
             return L10n.string(.quotaUnknownPlan)
         }
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        self.init(rawValue: Optional(value))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
-struct QuotaWindow: Equatable {
+struct QuotaWindow: Codable, Equatable {
     var usedPercentage: Double
     var resetsAt: Date?
 }
 
-struct MonetaryQuota: Equatable {
+struct MonetaryQuota: Codable, Equatable {
     var usedMinorUnits: Double?
     var limitMinorUnits: Double?
     var usedPercentage: Double?
@@ -167,16 +178,76 @@ struct MonetaryQuota: Equatable {
     var resetsAt: Date?
 }
 
-enum AccountQuotaInfo: Equatable {
+enum AccountQuotaInfo: Codable, Equatable {
     case personal(plan: ClaudeSubscriptionPlan, fiveHour: QuotaWindow?, sevenDay: QuotaWindow?)
     case monetary(plan: ClaudeSubscriptionPlan, quota: MonetaryQuota)
     case unavailable(String)
+
+    private enum CodingKeys: String, CodingKey {
+        case kind
+        case plan
+        case fiveHour
+        case sevenDay
+        case quota
+        case message
+    }
+
+    private enum Kind: String, Codable {
+        case personal
+        case monetary
+        case unavailable
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try container.decode(Kind.self, forKey: .kind)
+
+        switch kind {
+        case .personal:
+            self = .personal(
+                plan: try container.decode(ClaudeSubscriptionPlan.self, forKey: .plan),
+                fiveHour: try container.decodeIfPresent(QuotaWindow.self, forKey: .fiveHour),
+                sevenDay: try container.decodeIfPresent(QuotaWindow.self, forKey: .sevenDay)
+            )
+        case .monetary:
+            self = .monetary(
+                plan: try container.decode(ClaudeSubscriptionPlan.self, forKey: .plan),
+                quota: try container.decode(MonetaryQuota.self, forKey: .quota)
+            )
+        case .unavailable:
+            self = .unavailable(try container.decode(String.self, forKey: .message))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case .personal(let plan, let fiveHour, let sevenDay):
+            try container.encode(Kind.personal, forKey: .kind)
+            try container.encode(plan, forKey: .plan)
+            try container.encodeIfPresent(fiveHour, forKey: .fiveHour)
+            try container.encodeIfPresent(sevenDay, forKey: .sevenDay)
+        case .monetary(let plan, let quota):
+            try container.encode(Kind.monetary, forKey: .kind)
+            try container.encode(plan, forKey: .plan)
+            try container.encode(quota, forKey: .quota)
+        case .unavailable(let message):
+            try container.encode(Kind.unavailable, forKey: .kind)
+            try container.encode(message, forKey: .message)
+        }
+    }
 }
 
 enum AccountQuotaLoadState: Equatable {
     case loading
     case loaded(AccountQuotaInfo)
     case failed(String)
+}
+
+struct AccountQuotaCacheSnapshot: Codable, Equatable {
+    var updatedAt: Date
+    var entries: [String: AccountQuotaInfo]
 }
 
 enum AddAccountResult: Equatable {

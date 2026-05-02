@@ -43,6 +43,10 @@ final class ClaudeAccountStore {
         backupDirectory.appendingPathComponent(".lock")
     }
 
+    private var quotaCacheFile: URL {
+        backupDirectory.appendingPathComponent("quota-cache.json")
+    }
+
     func currentIdentity() throws -> AccountIdentity? {
         let configURL = claudeConfigURL()
         logger.notice("current identity read config")
@@ -347,6 +351,39 @@ final class ClaudeAccountStore {
             let info = usageInfo(from: object, plan: parsed.oauth.plan)
             logger.notice("usage info done afterRefresh number=\(account.number)")
             return info
+        }
+    }
+
+    func cachedQuotaSnapshot() -> AccountQuotaCacheSnapshot? {
+        guard fileManager.fileExists(atPath: quotaCacheFile.path) else {
+            return nil
+        }
+
+        do {
+            let data = try Data(contentsOf: quotaCacheFile)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let snapshot = try decoder.decode(AccountQuotaCacheSnapshot.self, from: data)
+            logger.notice("quota cache read entries=\(snapshot.entries.count)")
+            return snapshot
+        } catch {
+            logger.error("quota cache read failed errorType=\(String(describing: type(of: error)))")
+            return nil
+        }
+    }
+
+    func writeQuotaSnapshot(_ snapshot: AccountQuotaCacheSnapshot) {
+        do {
+            try setupDirectories()
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(snapshot)
+            try data.write(to: quotaCacheFile, options: .atomic)
+            chmod(quotaCacheFile.path, S_IRUSR | S_IWUSR)
+            logger.notice("quota cache wrote entries=\(snapshot.entries.count)")
+        } catch {
+            logger.error("quota cache write failed errorType=\(String(describing: type(of: error)))")
         }
     }
 

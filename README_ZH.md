@@ -8,11 +8,19 @@ CCAS 是 Claude Code Account Switcher 的缩写，是一个原生 macOS 菜单�
 
 CCAS 与 Anthropic 或 Claude 官方没有关联。
 
+## 截图
+
+![CCAS 菜单显示账号额度信息](ScreenShot.png)
+
 ## 功能
 
 - 原生 macOS 菜单栏应用。
 - 添加当前 Claude Code 已登录账号。
-- 按 email 和组织名称列出已保存账号。
+- 按 email、组织名称和账号类型列出已保存账号。
+- 显示账号额度信息，帮助你在切换前选择合适账号：
+  - Pro 和 Max 账号显示 5 小时、本周两个进度条和重置时间。
+  - Team 和 Enterprise 账号显示已用金额、总额度、消耗比例和重置时间。
+- 打开菜单时先复用上次获取的额度数据，同时在后台刷新，避免菜单高度先短后高。
 - 在菜单栏面板中一键切换账号。
 - 中英双语界面：默认英文，系统语言以 `zh` 开头时显示中文。
 - 账号元数据保存在 `~/.ccas`。
@@ -73,6 +81,12 @@ open dist/CCAS.app
 
 切换完成后，请重启 Claude Code，让 Claude Code 重新读取更新后的凭据和配置。
 
+### 查看额度
+
+打开 CCAS 菜单栏面板即可查看已保存账号的额度信息。CCAS 会先显示本地缓存的额度数据，让菜单高度保持稳定；随后在后台获取最新额度，拿到新数据后自动更新界面。
+
+获取额度时，右侧刷新按钮会显示加载动效。`添加账号` 和刷新按钮之间会显示额度数据的最后更新时间，例如 `12 s` 或 `4 m`。
+
 ## 工作原理
 
 Claude Code 的登录状态主要保存在两个位置：
@@ -84,6 +98,7 @@ CCAS 会为每个账号保存一份备份：
 
 - 账号索引：`~/.ccas/sequence.json`
 - 配置快照：`~/.ccas/configs/`
+- 上次获取的额度快照：`~/.ccas/quota-cache.json`
 - 已管理账号凭据：macOS Keychain service `li.luy.ccas.accounts`
 
 切换账号时，CCAS 会：
@@ -96,15 +111,19 @@ CCAS 会为每个账号保存一份备份：
 
 `~/.ccas/configs/` 中的文件只是配置快照，不包含完整 OAuth 凭据。仅靠这些配置文件不能恢复一个账号，因为真正的凭据保存在 Keychain 中。
 
+菜单打开时，CCAS 会先读取 `~/.ccas/quota-cache.json`，立即展示已有额度信息；然后使用每个账号已保存的 Claude OAuth 凭据请求最新额度数据，并在刷新成功后更新缓存。
+
 ## 数据与隐私
 
-CCAS 的设计目标是本地工具。
+CCAS 的设计目标是本地优先工具。
 
 - 不上传凭据。
 - 不包含遥测。
 - 账号元数据和配置快照保存在 `~/.ccas`。
+- 缓存的额度数据保存在 `~/.ccas/quota-cache.json`。
 - 已管理账号的凭据保存在 macOS Keychain 的 `li.luy.ccas.accounts` service 下。
 - 切换账号时会更新 Claude Code 当前使用的 Keychain 项 `Claude Code-credentials`。
+- 仅在刷新账号额度时，向 Anthropic 的 usage 接口发起带认证的直接请求。
 
 因为 CCAS 需要读写 Keychain，macOS 可能会请求权限。如果你信任当前构建，并希望减少重复弹窗，可以选择 `Always Allow`。
 

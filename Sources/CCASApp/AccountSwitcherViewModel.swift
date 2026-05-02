@@ -35,15 +35,19 @@ final class AccountSwitcherViewModel: ObservableObject {
     @Published private(set) var accounts: [ManagedAccount] = []
     @Published private(set) var currentIdentity: AccountIdentity?
     @Published private(set) var quotaStates: [Int: AccountQuotaLoadState] = [:]
+    @Published private(set) var isFetchingQuota = false
+    @Published private(set) var lastQuotaUpdatedAt: Date?
     @Published private var statusMessage: StatusMessage = .none
     @Published var isBusy = false
 
     private let store: ClaudeAccountStore
     private let logger = DebugLogger(category: "ViewModel")
     private var quotaTask: Task<Void, Never>?
+    private var quotaRefreshGeneration = 0
 
     init(store: ClaudeAccountStore = ClaudeAccountStore()) {
         self.store = store
+        loadCachedQuotaInformation()
     }
 
     deinit {
@@ -138,19 +142,49 @@ final class AccountSwitcherViewModel: ObservableObject {
         quotaStates[account.number]
     }
 
+    func quotaAgeText(now: Date = Date()) -> String? {
+        guard let lastQuotaUpdatedAt else {
+            return nil
+        }
+
+        let seconds = max(0, Int(now.timeIntervalSince(lastQuotaUpdatedAt)))
+        if seconds < 60 {
+            return "\(seconds) s"
+        }
+
+        let minutes = seconds / 60
+        if minutes < 60 {
+            return "\(minutes) m"
+        }
+
+        let hours = minutes / 60
+        if hours < 24 {
+            return "\(hours) h"
+        }
+
+        return "\(hours / 24) d"
+    }
+
     private func loadQuotaInformation() {
         quotaTask?.cancel()
+        quotaRefreshGeneration += 1
+        let generation = quotaRefreshGeneration
 
         let accounts = accounts
         guard !accounts.isEmpty else {
             quotaStates = [:]
+            isFetchingQuota = false
+            lastQuotaUpdatedAt = nil
             return
         }
 
-        quotaStates = Dictionary(uniqueKeysWithValues: accounts.map { ($0.number, .loading) })
+        prepareQuotaStatesForRefresh(accounts: accounts)
+        isFetchingQuota = true
         logger.notice("usage refresh start accountCount=\(accounts.count)")
 
         quotaTask = Task {
+            var didUpdate = false
+
             for account in accounts {
                 guard !Task.isCancelled else {
                     return
@@ -162,16 +196,61 @@ final class AccountSwitcherViewModel: ObservableObject {
                         return
                     }
                     self.setQuotaState(.loaded(info), for: account.number)
+                    didUpdate = true
                     self.logger.notice("usage refresh account done number=\(account.number)")
                 } catch {
                     guard !Task.isCancelled else {
                         return
                     }
-                    self.setQuotaState(.failed(error.localizedDescription), for: account.number)
+                    if !self.hasLoadedQuotaState(for: account.number) {
+                        self.setQuotaState(.failed(error.localizedDescription), for: account.number)
+                    }
                     self.logger.error("usage refresh account failed number=\(account.number) errorType=\(String(describing: type(of: error)))")
                 }
             }
+
+            guard generation == self.quotaRefreshGeneration else {
+                return
+            }
+
+            if didUpdate {
+                self.recordQuotaCacheUpdate(for: accounts)
+            }
+            self.isFetchingQuota = false
             self.logger.notice("usage refresh done")
+        }
+    }
+
+    private func loadCachedQuotaInformation() {
+        guard let snapshot = store.cachedQuotaSnapshot() else {
+            return
+        }
+
+        var cachedStates: [Int: AccountQuotaLoadState] = [:]
+        for (numberText, info) in snapshot.entries {
+            guard let number = Int(numberText) else {
+                continue
+            }
+            cachedStates[number] = .loaded(info)
+        }
+
+        quotaStates = cachedStates
+        lastQuotaUpdatedAt = cachedStates.isEmpty ? nil : snapshot.updatedAt
+        logger.notice("usage cache loaded stateCount=\(cachedStates.count)")
+    }
+
+    private func prepareQuotaStatesForRefresh(accounts: [ManagedAccount]) {
+        let accountNumbers = Set(accounts.map(\.number))
+        var states = quotaStates.filter { accountNumbers.contains($0.key) }
+
+        for account in accounts where !Self.isLoadedQuotaState(states[account.number]) {
+            states[account.number] = .loading
+        }
+
+        quotaStates = states
+
+        if !states.contains(where: { accountNumbers.contains($0.key) && Self.isLoadedQuotaState($0.value) }) {
+            lastQuotaUpdatedAt = nil
         }
     }
 
@@ -179,6 +258,41 @@ final class AccountSwitcherViewModel: ObservableObject {
         var states = quotaStates
         states[number] = state
         quotaStates = states
+    }
+
+    private func hasLoadedQuotaState(for number: Int) -> Bool {
+        Self.isLoadedQuotaState(quotaStates[number])
+    }
+
+    private static func isLoadedQuotaState(_ state: AccountQuotaLoadState?) -> Bool {
+        guard let state else {
+            return false
+        }
+
+        if case .loaded = state {
+            return true
+        }
+        return false
+    }
+
+    private func recordQuotaCacheUpdate(for accounts: [ManagedAccount]) {
+        let accountNumbers = Set(accounts.map(\.number))
+        var entries: [String: AccountQuotaInfo] = [:]
+
+        for (number, state) in quotaStates where accountNumbers.contains(number) {
+            guard case .loaded(let info) = state else {
+                continue
+            }
+            entries[String(number)] = info
+        }
+
+        guard !entries.isEmpty else {
+            return
+        }
+
+        let updatedAt = Date()
+        lastQuotaUpdatedAt = updatedAt
+        store.writeQuotaSnapshot(AccountQuotaCacheSnapshot(updatedAt: updatedAt, entries: entries))
     }
 
     private func run(_ action: @escaping () throws -> Void, onSuccess: (() -> Void)? = nil) {

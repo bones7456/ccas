@@ -4,6 +4,7 @@ import SwiftUI
 struct MenuContentView: View {
     @ObservedObject var viewModel: AccountSwitcherViewModel
     @State private var languageRevision = 0
+    @State private var quotaClock = Date()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -20,15 +21,34 @@ struct MenuContentView: View {
 
                 Spacer()
 
+                if let quotaAgeText = viewModel.quotaAgeText(now: quotaClock) {
+                    Text(quotaAgeText)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+
                 Button {
                     viewModel.refresh()
                 } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .frame(width: 18, height: 18)
+                    if viewModel.isFetchingQuota {
+                        ProgressView()
+                            .controlSize(.small)
+                            .scaleEffect(0.7)
+                            .frame(width: 18, height: 18)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .frame(width: 18, height: 18)
+                    }
                 }
+                .frame(width: 22, height: 22)
                 .buttonStyle(.borderless)
-                .help(L10n.string(.refresh))
-                .disabled(viewModel.isBusy)
+                .help(viewModel.isFetchingQuota ? L10n.string(.quotaLoading) : L10n.string(.refresh))
+                .disabled(viewModel.isBusy || viewModel.isFetchingQuota)
+            }
+            .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
+                quotaClock = date
             }
 
             Divider()
@@ -62,6 +82,7 @@ struct MenuContentView: View {
         .padding(14)
         .frame(width: 380)
         .onAppear {
+            quotaClock = Date()
             viewModel.refresh()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification)) { _ in

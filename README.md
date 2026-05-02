@@ -8,11 +8,19 @@ It keeps a small icon in the menu bar. Click the icon, add the Claude Code accou
 
 CCAS is not affiliated with Anthropic or Claude.
 
+## Screenshot
+
+![CCAS menu showing account usage](ScreenShot.png)
+
 ## Features
 
 - Native macOS menu bar app.
 - Add the currently signed-in Claude Code account.
-- List saved Claude Code accounts with email and organization name.
+- List saved Claude Code accounts with email, organization name, and plan type.
+- Show account usage so you can choose the right account before switching:
+  - Pro and Max accounts show 5-hour and weekly usage bars with reset times.
+  - Team and Enterprise accounts show credit usage, total limit, usage ratio, and reset time.
+- Reuse the last fetched usage data immediately when opening the menu, then refresh it in the background.
 - Switch accounts from the menu bar.
 - Bilingual UI: English by default, Simplified Chinese when the system language starts with `zh`.
 - Stores account metadata under `~/.ccas`.
@@ -73,6 +81,12 @@ Open the CCAS menu bar panel and click the account you want to use.
 
 After switching, restart Claude Code so it reloads the updated credentials and config.
 
+### Check Usage
+
+Open the CCAS menu bar panel to see saved account usage at a glance. CCAS shows cached usage first to keep the menu height stable, then fetches fresh usage data in the background and updates the panel when it arrives.
+
+The refresh button shows a loading indicator while usage is being fetched. The text between `Add Account` and the refresh button shows when usage data was last updated, such as `12 s` or `4 m`.
+
 ## How It Works
 
 Claude Code stores its signed-in state in two places:
@@ -84,6 +98,7 @@ CCAS saves one backup per account:
 
 - Account index: `~/.ccas/sequence.json`
 - Config snapshots: `~/.ccas/configs/`
+- Last fetched usage snapshot: `~/.ccas/quota-cache.json`
 - Managed account credentials: macOS Keychain service `li.luy.ccas.accounts`
 
 When switching accounts, CCAS:
@@ -96,15 +111,19 @@ When switching accounts, CCAS:
 
 The files in `~/.ccas/configs/` are config snapshots. They are not enough to restore an account by themselves because OAuth credentials live in Keychain.
 
+When the menu opens, CCAS reads `~/.ccas/quota-cache.json` first so usage rows can be displayed immediately. It then uses the saved Claude OAuth credentials for each account to request current usage data and updates the cache after a successful refresh.
+
 ## Data And Privacy
 
-CCAS is designed as a local-only utility.
+CCAS is designed as a local-first utility.
 
 - It does not upload credentials.
 - It does not include telemetry.
 - It stores account metadata and config snapshots under `~/.ccas`.
+- It stores cached usage data under `~/.ccas/quota-cache.json`.
 - It stores account credentials in macOS Keychain under `li.luy.ccas.accounts`.
 - It updates Claude Code's active Keychain item, `Claude Code-credentials`, when switching accounts.
+- It makes direct authenticated requests to Anthropic's usage endpoint only to refresh account usage information.
 
 Because CCAS reads and writes Keychain items, macOS may ask for permission. If you trust the build and want to avoid repeated prompts, choose `Always Allow`.
 
