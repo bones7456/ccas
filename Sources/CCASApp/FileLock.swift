@@ -5,7 +5,7 @@ import OSLog
 final class FileLock {
     private let path: URL
     private var descriptor: Int32 = -1
-    private let logger = Logger(subsystem: "dev.local.ccas", category: "FileLock")
+    private let logger = Logger(subsystem: "li.luy.ccas", category: "FileLock")
 
     init(path: URL) {
         self.path = path

@@ -6,10 +6,10 @@ final class ClaudeAccountStore {
     private let fileManager: FileManager
     private let keychain: KeychainClient
     private let home: URL
-    private let logger = Logger(subsystem: "dev.local.ccas", category: "AccountStore")
+    private let logger = Logger(subsystem: "li.luy.ccas", category: "AccountStore")
 
     private let claudeCredentialsService = "Claude Code-credentials"
-    private let backupCredentialsService = "dev.local.ccas.accounts"
+    private let backupCredentialsService = "li.luy.ccas.accounts"
 
     init(
         fileManager: FileManager = .default,
@@ -380,7 +380,7 @@ final class ClaudeAccountStore {
     }
 
     private func readAccountCredentials(number: String, email: String) throws -> String {
-        logger.notice("read backup credentials number=\(number, privacy: .public) email=\(email, privacy: .public)")
+        logger.notice("read backup credentials number=\(number, privacy: .public) email=\(email, privacy: .public) service=\(self.backupCredentialsService, privacy: .public)")
         return try keychain.readGenericPassword(
             service: backupCredentialsService,
             account: backupCredentialAccount(number: number, email: email)
@@ -388,7 +388,7 @@ final class ClaudeAccountStore {
     }
 
     private func writeAccountCredentials(number: String, email: String, credentials: String) throws {
-        logger.notice("write backup credentials number=\(number, privacy: .public) email=\(email, privacy: .public)")
+        logger.notice("write backup credentials number=\(number, privacy: .public) email=\(email, privacy: .public) service=\(self.backupCredentialsService, privacy: .public)")
         try keychain.upsertGenericPassword(
             service: backupCredentialsService,
             account: backupCredentialAccount(number: number, email: email),

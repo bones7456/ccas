@@ -8,7 +8,7 @@ struct KeychainPasswordItem {
 }
 
 final class KeychainClient {
-    private let logger = Logger(subsystem: "dev.local.ccas", category: "Keychain")
+    private let logger = Logger(subsystem: "li.luy.ccas", category: "Keychain")
 
     func readGenericPasswordItem(service: String) throws -> KeychainPasswordItem? {
         logger.notice("read item service=\(service, privacy: .public)")

@@ -39,7 +39,7 @@ final class AccountSwitcherViewModel: ObservableObject {
     @Published var isBusy = false
 
     private let store: ClaudeAccountStore
-    private let logger = Logger(subsystem: "dev.local.ccas", category: "ViewModel")
+    private let logger = Logger(subsystem: "li.luy.ccas", category: "ViewModel")
 
     init(store: ClaudeAccountStore = ClaudeAccountStore()) {
         self.store = store
