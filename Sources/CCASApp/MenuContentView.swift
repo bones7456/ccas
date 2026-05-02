@@ -39,7 +39,7 @@ struct MenuContentView: View {
                 Text(viewModel.statusText)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .lineLimit(3)
+                    .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
             }
 

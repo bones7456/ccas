@@ -1,0 +1,408 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0940FA42CF373B6AB5A00BA7 /* MenuBarIconAlternateTemplate.png in Resources */ = {isa = PBXBuildFile; fileRef = 11C0D2AFEF110A7015C952BA /* MenuBarIconAlternateTemplate.png */; };
+		1C2F90FFC2E7926472C5ADF0 /* FileLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CD128EEDB27B99770BF239D /* FileLock.swift */; };
+		1C38162F17CDFFC7955C5DDC /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 251272FE1C242F79EEBC316F /* Cocoa.framework */; };
+		1F6E1CC44F357BAE8D97D05C /* AccountModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46F8C248C895B3EA84CB9955 /* AccountModels.swift */; };
+		1FFD8601D00F7619C25C8F08 /* ClaudeAccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E09256BDA0355EF9617953 /* ClaudeAccountStore.swift */; };
+		31F3547CE747635DECE6C9B9 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF22FE85744B125BA1E8E91 /* Localization.swift */; };
+		3858E6580A3D15B1936DD24F /* AccountSwitcherViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8314B04B6EEF533AF90C4B6A /* AccountSwitcherViewModel.swift */; };
+		3C2C397AA1BEF81B4FBA2B52 /* MenuBarIconTemplate.png in Resources */ = {isa = PBXBuildFile; fileRef = 27D8DA95F48C70FC556484B6 /* MenuBarIconTemplate.png */; };
+		3FC031405BD6435B2C9E5A69 /* CCASApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38CD33B1A9D4C96AC52DD73 /* CCASApp.swift */; };
+		6AD06373EF9CE1A51C62F005 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 846629B2CA5488AB70372DD7 /* AppIcon.icns */; };
+		996AACB6383C3AAAC8D9ECBC /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = C6BB9E061BAE27BF48E03A39 /* AppIcon.png */; };
+		BA201F353F4CD05560617372 /* KeychainClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFB2F3AB133F03C0BBC5531 /* KeychainClient.swift */; };
+		D2BDA721FBF4254A159EC4A0 /* MenuContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AFC3F8BFD3587A1E8A829CD /* MenuContentView.swift */; };
+		E3A89246EA5DC02B336EF637 /* AppAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E4B5C3CADFF9F9627F2E4B /* AppAssets.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0FFB2F3AB133F03C0BBC5531 /* KeychainClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeychainClient.swift; sourceTree = "<group>"; };
+		11C0D2AFEF110A7015C952BA /* MenuBarIconAlternateTemplate.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = MenuBarIconAlternateTemplate.png; sourceTree = "<group>"; };
+		251272FE1C242F79EEBC316F /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
+		27D8DA95F48C70FC556484B6 /* MenuBarIconTemplate.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = MenuBarIconTemplate.png; sourceTree = "<group>"; };
+		2AFC3F8BFD3587A1E8A829CD /* MenuContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MenuContentView.swift; sourceTree = "<group>"; };
+		46F8C248C895B3EA84CB9955 /* AccountModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccountModels.swift; sourceTree = "<group>"; };
+		4FF22FE85744B125BA1E8E91 /* Localization.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		5FACD0CE9FE38115F004F24D /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		6CD128EEDB27B99770BF239D /* FileLock.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileLock.swift; sourceTree = "<group>"; };
+		8314B04B6EEF533AF90C4B6A /* AccountSwitcherViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccountSwitcherViewModel.swift; sourceTree = "<group>"; };
+		846629B2CA5488AB70372DD7 /* AppIcon.icns */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		B7E4B5C3CADFF9F9627F2E4B /* AppAssets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppAssets.swift; sourceTree = "<group>"; };
+		C38CD33B1A9D4C96AC52DD73 /* CCASApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CCASApp.swift; sourceTree = "<group>"; };
+		C6BB9E061BAE27BF48E03A39 /* AppIcon.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = AppIcon.png; sourceTree = "<group>"; };
+		C9F95CF2C79016C58798E736 /* CCAS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CCAS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2E09256BDA0355EF9617953 /* ClaudeAccountStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeAccountStore.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FFA8810E8D6A208191FC960E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1C38162F17CDFFC7955C5DDC /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		22D194910D0D4106B92554B7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C9F95CF2C79016C58798E736 /* CCAS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3036C526C11ECED265E427C3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				59FD9ADF9B597F46EF8B2685 /* OS X */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		31AD8F853EE0643D71CA3853 = {
+			isa = PBXGroup;
+			children = (
+				22D194910D0D4106B92554B7 /* Products */,
+				3036C526C11ECED265E427C3 /* Frameworks */,
+				8C4CEF89478464A8018DFBE2 /* CCASApp */,
+			);
+			sourceTree = "<group>";
+		};
+		59FD9ADF9B597F46EF8B2685 /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				251272FE1C242F79EEBC316F /* Cocoa.framework */,
+			);
+			name = "OS X";
+			sourceTree = "<group>";
+		};
+		5FF95D70813DD411FC3DF1EC /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				846629B2CA5488AB70372DD7 /* AppIcon.icns */,
+				C6BB9E061BAE27BF48E03A39 /* AppIcon.png */,
+				11C0D2AFEF110A7015C952BA /* MenuBarIconAlternateTemplate.png */,
+				27D8DA95F48C70FC556484B6 /* MenuBarIconTemplate.png */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		8C4CEF89478464A8018DFBE2 /* CCASApp */ = {
+			isa = PBXGroup;
+			children = (
+				5FF95D70813DD411FC3DF1EC /* Resources */,
+				46F8C248C895B3EA84CB9955 /* AccountModels.swift */,
+				8314B04B6EEF533AF90C4B6A /* AccountSwitcherViewModel.swift */,
+				B7E4B5C3CADFF9F9627F2E4B /* AppAssets.swift */,
+				C38CD33B1A9D4C96AC52DD73 /* CCASApp.swift */,
+				E2E09256BDA0355EF9617953 /* ClaudeAccountStore.swift */,
+				6CD128EEDB27B99770BF239D /* FileLock.swift */,
+				0FFB2F3AB133F03C0BBC5531 /* KeychainClient.swift */,
+				4FF22FE85744B125BA1E8E91 /* Localization.swift */,
+				2AFC3F8BFD3587A1E8A829CD /* MenuContentView.swift */,
+				5FACD0CE9FE38115F004F24D /* Info.plist */,
+			);
+			name = CCASApp;
+			path = Sources/CCASApp;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2CA3371AF4FD8B90E40C0A66 /* CCAS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0278FADD1FBC5984F6FB83BB /* Build configuration list for PBXNativeTarget "CCAS" */;
+			buildPhases = (
+				43E6273DB72776A34F1D7A82 /* Sources */,
+				FFA8810E8D6A208191FC960E /* Frameworks */,
+				41BD0C17CC55B1D6C3B29006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CCAS;
+			productName = CCAS;
+			productReference = C9F95CF2C79016C58798E736 /* CCAS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FCC040C5517DA7BB4D93AF30 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1640;
+				ORGANIZATIONNAME = "CCAS contributors";
+				TargetAttributes = {
+					2CA3371AF4FD8B90E40C0A66 = {
+						DevelopmentTeam = RHVTXHK83V;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 0E7D401955D9CC99356D4674 /* Build configuration list for PBXProject "CCAS" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 31AD8F853EE0643D71CA3853;
+			productRefGroup = 22D194910D0D4106B92554B7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2CA3371AF4FD8B90E40C0A66 /* CCAS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		41BD0C17CC55B1D6C3B29006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6AD06373EF9CE1A51C62F005 /* AppIcon.icns in Resources */,
+				996AACB6383C3AAAC8D9ECBC /* AppIcon.png in Resources */,
+				0940FA42CF373B6AB5A00BA7 /* MenuBarIconAlternateTemplate.png in Resources */,
+				3C2C397AA1BEF81B4FBA2B52 /* MenuBarIconTemplate.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		43E6273DB72776A34F1D7A82 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1F6E1CC44F357BAE8D97D05C /* AccountModels.swift in Sources */,
+				3858E6580A3D15B1936DD24F /* AccountSwitcherViewModel.swift in Sources */,
+				E3A89246EA5DC02B336EF637 /* AppAssets.swift in Sources */,
+				3FC031405BD6435B2C9E5A69 /* CCASApp.swift in Sources */,
+				1FFD8601D00F7619C25C8F08 /* ClaudeAccountStore.swift in Sources */,
+				1C2F90FFC2E7926472C5ADF0 /* FileLock.swift in Sources */,
+				BA201F353F4CD05560617372 /* KeychainClient.swift in Sources */,
+				31F3547CE747635DECE6C9B9 /* Localization.swift in Sources */,
+				D2BDA721FBF4254A159EC4A0 /* MenuContentView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3230F1260294ED3875BFDDA3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		567633B41C46EE1F87B8ECB1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = RHVTXHK83V;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/CCASApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Claude Code Account Switcher";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.2.1;
+				PRODUCT_BUNDLE_IDENTIFIER = Senob.CCAS;
+				PRODUCT_NAME = CCAS;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		BA2B7AFDAD274D6C68F0165C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = RHVTXHK83V;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/CCASApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Claude Code Account Switcher";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.2.1;
+				PRODUCT_BUNDLE_IDENTIFIER = Senob.CCAS;
+				PRODUCT_NAME = CCAS;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		D2991AD390185ED353C687B8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0278FADD1FBC5984F6FB83BB /* Build configuration list for PBXNativeTarget "CCAS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA2B7AFDAD274D6C68F0165C /* Release */,
+				567633B41C46EE1F87B8ECB1 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0E7D401955D9CC99356D4674 /* Build configuration list for PBXProject "CCAS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D2991AD390185ED353C687B8 /* Debug */,
+				3230F1260294ED3875BFDDA3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = FCC040C5517DA7BB4D93AF30 /* Project object */;
+}

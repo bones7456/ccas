@@ -6,8 +6,37 @@ APP_DIR="$ROOT_DIR/dist/CCAS.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
+RESOURCE_SOURCE_DIR="$ROOT_DIR/Sources/CCASApp/Resources"
+INFO_PLIST="$ROOT_DIR/Sources/CCASApp/Info.plist"
+XCODE_PROJECT="$ROOT_DIR/CCAS.xcodeproj"
+SCHEME="${SCHEME:-CCAS}"
+CONFIGURATION="${CONFIGURATION:-Release}"
 
 cd "$ROOT_DIR"
+
+BUILD_SETTINGS_FILE="$(mktemp)"
+trap 'rm -f "$BUILD_SETTINGS_FILE"' EXIT
+
+xcodebuild \
+    -project "$XCODE_PROJECT" \
+    -scheme "$SCHEME" \
+    -configuration "$CONFIGURATION" \
+    -showBuildSettings \
+    > "$BUILD_SETTINGS_FILE"
+
+build_setting() {
+    local key="$1"
+    awk -F' = ' -v key="$key" '
+        $1 ~ "^[[:space:]]*" key "$" {
+            print $2
+            exit
+        }
+    ' "$BUILD_SETTINGS_FILE"
+}
+
+MARKETING_VERSION="${MARKETING_VERSION:-$(build_setting MARKETING_VERSION)}"
+CURRENT_PROJECT_VERSION="${CURRENT_PROJECT_VERSION:-$(build_setting CURRENT_PROJECT_VERSION)}"
+PRODUCT_BUNDLE_IDENTIFIER="${PRODUCT_BUNDLE_IDENTIFIER:-$(build_setting PRODUCT_BUNDLE_IDENTIFIER)}"
 
 swift build -c release
 
@@ -17,41 +46,13 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$ROOT_DIR/.build/release/CCAS" "$MACOS_DIR/CCAS"
 chmod +x "$MACOS_DIR/CCAS"
 
-if [ -d "$ROOT_DIR/Resources" ]; then
-    cp -R "$ROOT_DIR/Resources/." "$RESOURCES_DIR/"
+if [ -d "$RESOURCE_SOURCE_DIR" ]; then
+    cp -R "$RESOURCE_SOURCE_DIR/." "$RESOURCES_DIR/"
 fi
 
-cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleExecutable</key>
-    <string>CCAS</string>
-    <key>CFBundleIdentifier</key>
-    <string>dev.local.ccas</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>CCAS</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>14.0</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-</dict>
-</plist>
-PLIST
+cp "$INFO_PLIST" "$CONTENTS_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $PRODUCT_BUNDLE_IDENTIFIER" "$CONTENTS_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $MARKETING_VERSION" "$CONTENTS_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $CURRENT_PROJECT_VERSION" "$CONTENTS_DIR/Info.plist"
 
 echo "$APP_DIR"

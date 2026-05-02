@@ -18,6 +18,7 @@ enum L10n {
         case errorInvalidClaudeConfig
         case errorKeychain
         case errorMissingBackupData
+        case errorMissingCredentials
         case errorNoActiveClaudeAccount
         case errorNoClaudeCredentials
         case errorNoManagedAccounts
@@ -87,6 +88,7 @@ enum L10n {
         .errorInvalidClaudeConfig: "Claude Code config is not valid JSON: %@",
         .errorKeychain: "Keychain operation failed: %@",
         .errorMissingBackupData: "Backup data is incomplete for account %d.",
+        .errorMissingCredentials: "Account %d is missing saved credentials. Sign in as %@ in Claude Code, then choose Add Account to update it.",
         .errorNoActiveClaudeAccount: "No active Claude Code account was found. Please sign in with Claude Code first.",
         .errorNoClaudeCredentials: "No Claude Code credentials were found. Please finish signing in with Claude Code first.",
         .errorNoManagedAccounts: "No accounts have been added yet.",
@@ -123,6 +125,7 @@ enum L10n {
         .errorInvalidClaudeConfig: "Claude Code 配置文件不是有效 JSON：%@",
         .errorKeychain: "Keychain 操作失败：%@",
         .errorMissingBackupData: "账号 %d 的备份数据不完整。",
+        .errorMissingCredentials: "账号 %d 缺少已保存凭据。请先在 Claude Code 登录 %@，再点添加账号更新。",
         .errorNoActiveClaudeAccount: "没有找到当前 Claude Code 登录账号。请先在 Claude Code 登录。",
         .errorNoClaudeCredentials: "没有找到 Claude Code 凭据。请先完成 Claude Code 登录。",
         .errorNoManagedAccounts: "还没有添加任何账号。",

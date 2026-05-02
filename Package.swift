@@ -1,6 +1,10 @@
 // swift-tools-version: 6.0
 
+import Foundation
 import PackageDescription
+
+let packageRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent().path
+let infoPlistPath = "\(packageRoot)/Sources/CCASApp/Info.plist"
 
 let package = Package(
     name: "CCAS",
@@ -13,7 +17,16 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "CCASApp",
-            path: "Sources/CCASApp"
+            path: "Sources/CCASApp",
+            exclude: [
+                "Info.plist"
+            ],
+            resources: [
+                .process("Resources")
+            ],
+            linkerSettings: [
+                .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", infoPlistPath])
+            ]
         )
     ]
 )
