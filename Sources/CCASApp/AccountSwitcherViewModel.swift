@@ -34,14 +34,20 @@ enum StatusMessage: Equatable {
 final class AccountSwitcherViewModel: ObservableObject {
     @Published private(set) var accounts: [ManagedAccount] = []
     @Published private(set) var currentIdentity: AccountIdentity?
+    @Published private(set) var quotaStates: [Int: AccountQuotaLoadState] = [:]
     @Published private var statusMessage: StatusMessage = .none
     @Published var isBusy = false
 
     private let store: ClaudeAccountStore
     private let logger = DebugLogger(category: "ViewModel")
+    private var quotaTask: Task<Void, Never>?
 
     init(store: ClaudeAccountStore = ClaudeAccountStore()) {
         self.store = store
+    }
+
+    deinit {
+        quotaTask?.cancel()
     }
 
     var currentTitle: String {
@@ -85,6 +91,8 @@ final class AccountSwitcherViewModel: ObservableObject {
                 self.statusMessage = .none
             }
             self.logger.notice("refresh completed accountCount=\(self.accounts.count) hasCurrentIdentity=\((self.currentIdentity != nil))")
+        } onSuccess: {
+            self.loadQuotaInformation()
         }
     }
 
@@ -102,6 +110,8 @@ final class AccountSwitcherViewModel: ObservableObject {
                 self.statusMessage = .updatedExisting(account.number)
             }
             self.logger.notice("add account completed accountCount=\(self.accounts.count) hasCurrentIdentity=\((self.currentIdentity != nil))")
+        } onSuccess: {
+            self.loadQuotaInformation()
         }
     }
 
@@ -119,15 +129,65 @@ final class AccountSwitcherViewModel: ObservableObject {
             self.accounts = try self.store.listAccounts()
             self.statusMessage = .switched(account.number)
             self.logger.notice("switch completed number=\(account.number) hasCurrentIdentity=\((self.currentIdentity != nil))")
+        } onSuccess: {
+            self.loadQuotaInformation()
         }
     }
 
-    private func run(_ action: @escaping () throws -> Void) {
+    func quotaState(for account: ManagedAccount) -> AccountQuotaLoadState? {
+        quotaStates[account.number]
+    }
+
+    private func loadQuotaInformation() {
+        quotaTask?.cancel()
+
+        let accounts = accounts
+        guard !accounts.isEmpty else {
+            quotaStates = [:]
+            return
+        }
+
+        quotaStates = Dictionary(uniqueKeysWithValues: accounts.map { ($0.number, .loading) })
+        logger.notice("usage refresh start accountCount=\(accounts.count)")
+
+        quotaTask = Task {
+            for account in accounts {
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                do {
+                    let info = try await self.store.usageInfo(for: account)
+                    guard !Task.isCancelled else {
+                        return
+                    }
+                    self.setQuotaState(.loaded(info), for: account.number)
+                    self.logger.notice("usage refresh account done number=\(account.number)")
+                } catch {
+                    guard !Task.isCancelled else {
+                        return
+                    }
+                    self.setQuotaState(.failed(error.localizedDescription), for: account.number)
+                    self.logger.error("usage refresh account failed number=\(account.number) errorType=\(String(describing: type(of: error)))")
+                }
+            }
+            self.logger.notice("usage refresh done")
+        }
+    }
+
+    private func setQuotaState(_ state: AccountQuotaLoadState, for number: Int) {
+        var states = quotaStates
+        states[number] = state
+        quotaStates = states
+    }
+
+    private func run(_ action: @escaping () throws -> Void, onSuccess: (() -> Void)? = nil) {
         logger.notice("operation start")
         isBusy = true
         Task {
             do {
                 try action()
+                onSuccess?()
             } catch {
                 self.logger.error("operation failed errorType=\(String(describing: type(of: error)))")
                 statusMessage = .error(error.localizedDescription)

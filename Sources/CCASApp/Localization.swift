@@ -29,6 +29,16 @@ enum L10n {
         case noAccountsTitle
         case notAdded
         case personal
+        case quotaFailed
+        case quotaFiveHour
+        case quotaLoading
+        case quotaNoData
+        case quotaReset
+        case quotaSpent
+        case quotaUnavailable
+        case quotaUnknownPlan
+        case quotaWeek
+        case quotaUnlimited
         case quit
         case refresh
         case signedOut
@@ -99,6 +109,16 @@ enum L10n {
         .noAccountsTitle: "No Accounts",
         .notAdded: "Not added",
         .personal: "personal",
+        .quotaFailed: "Usage unavailable: %@",
+        .quotaFiveHour: "5h",
+        .quotaLoading: "Loading usage...",
+        .quotaNoData: "No usage data yet",
+        .quotaReset: "Resets %@",
+        .quotaSpent: "%@ / %@ spent",
+        .quotaUnavailable: "Usage unavailable",
+        .quotaUnknownPlan: "Unknown",
+        .quotaWeek: "Week",
+        .quotaUnlimited: "Unlimited",
         .quit: "Quit",
         .refresh: "Refresh",
         .signedOut: "Signed out",
@@ -136,6 +156,16 @@ enum L10n {
         .noAccountsTitle: "暂无账号",
         .notAdded: "未添加",
         .personal: "个人",
+        .quotaFailed: "额度不可用：%@",
+        .quotaFiveHour: "5小时",
+        .quotaLoading: "正在获取额度...",
+        .quotaNoData: "暂无额度数据",
+        .quotaReset: "%@ 重置",
+        .quotaSpent: "已用 %@ / %@",
+        .quotaUnavailable: "额度不可用",
+        .quotaUnknownPlan: "未知",
+        .quotaWeek: "本周",
+        .quotaUnlimited: "无限额",
         .quit: "退出",
         .refresh: "刷新",
         .signedOut: "未登录",

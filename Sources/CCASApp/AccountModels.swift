@@ -116,6 +116,69 @@ struct ManagedAccount: Identifiable, Equatable {
     }
 }
 
+enum ClaudeSubscriptionPlan: String, Equatable {
+    case pro
+    case max
+    case team
+    case enterprise
+    case unknown
+
+    init(rawValue: String?) {
+        switch rawValue?.lowercased() {
+        case "pro":
+            self = .pro
+        case "max":
+            self = .max
+        case "team":
+            self = .team
+        case "enterprise":
+            self = .enterprise
+        default:
+            self = .unknown
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .pro:
+            return "Pro"
+        case .max:
+            return "Max"
+        case .team:
+            return "Team"
+        case .enterprise:
+            return "Enterprise"
+        case .unknown:
+            return L10n.string(.quotaUnknownPlan)
+        }
+    }
+}
+
+struct QuotaWindow: Equatable {
+    var usedPercentage: Double
+    var resetsAt: Date?
+}
+
+struct MonetaryQuota: Equatable {
+    var usedMinorUnits: Double?
+    var limitMinorUnits: Double?
+    var usedPercentage: Double?
+    var currency: String
+    var resetsAt: Date?
+}
+
+enum AccountQuotaInfo: Equatable {
+    case personal(plan: ClaudeSubscriptionPlan, fiveHour: QuotaWindow?, sevenDay: QuotaWindow?)
+    case monetary(plan: ClaudeSubscriptionPlan, quota: MonetaryQuota)
+    case unavailable(String)
+}
+
+enum AccountQuotaLoadState: Equatable {
+    case loading
+    case loaded(AccountQuotaInfo)
+    case failed(String)
+}
+
 enum AddAccountResult: Equatable {
     case added(ManagedAccount)
     case updated(ManagedAccount)

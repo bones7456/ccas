@@ -1,6 +1,7 @@
 import Darwin
 import Foundation
 
+@MainActor
 final class ClaudeAccountStore {
     private let fileManager: FileManager
     private let keychain: KeychainClient
@@ -9,6 +10,12 @@ final class ClaudeAccountStore {
 
     private let claudeCredentialsService = "Claude Code-credentials"
     private let backupCredentialsService = "li.luy.ccas.accounts"
+    private let anthropicAPIBaseURL = URL(string: "https://api.anthropic.com")!
+    private let anthropicOAuthTokenURL = URL(string: "https://platform.claude.com/v1/oauth/token")!
+    private let anthropicOAuthClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+    private let anthropicOAuthBeta = "oauth-2025-04-20"
+    private let claudeAIProfileScope = "user:profile"
+    private let claudeAIInferenceScope = "user:inference"
 
     init(
         fileManager: FileManager = .default,
@@ -310,6 +317,39 @@ final class ClaudeAccountStore {
         }
     }
 
+    func usageInfo(for account: ManagedAccount) async throws -> AccountQuotaInfo {
+        logger.notice("usage info start number=\(account.number)")
+        let number = String(account.number)
+        let credentials = try readAccountCredentials(number: number, email: account.record.email)
+        guard !credentials.isEmpty else {
+            throw AccountSwitcherError.missingCredentials(account.number, account.record.email)
+        }
+
+        var parsed = try parseClaudeCredentials(credentials)
+        guard parsed.oauth.scopes.contains(claudeAIProfileScope) else {
+            logger.notice("usage info unavailable missingProfileScope number=\(account.number)")
+            return .unavailable(L10n.string(.quotaUnavailable))
+        }
+
+        if parsed.oauth.isExpiringSoon {
+            try await refreshAndStoreOAuthCredentials(&parsed, for: account)
+        }
+
+        do {
+            let object = try await fetchUsageObject(accessToken: parsed.oauth.accessToken)
+            let info = usageInfo(from: object, plan: parsed.oauth.plan)
+            logger.notice("usage info done number=\(account.number)")
+            return info
+        } catch QuotaFetchError.unauthorized {
+            logger.notice("usage info unauthorized refreshing number=\(account.number)")
+            try await refreshAndStoreOAuthCredentials(&parsed, for: account)
+            let object = try await fetchUsageObject(accessToken: parsed.oauth.accessToken)
+            let info = usageInfo(from: object, plan: parsed.oauth.plan)
+            logger.notice("usage info done afterRefresh number=\(account.number)")
+            return info
+        }
+    }
+
     private func setupDirectories() throws {
         for directory in [backupDirectory, configsDirectory] {
             if !fileManager.fileExists(atPath: directory.path) {
@@ -547,6 +587,470 @@ final class ClaudeAccountStore {
         if updated {
             data.lastUpdated = Timestamp.now()
             try writeSequence(data)
+        }
+    }
+
+    private func parseClaudeCredentials(_ credentials: String) throws -> ParsedClaudeCredentials {
+        guard let data = credentials.data(using: .utf8) else {
+            throw QuotaFetchError.invalidCredentials
+        }
+
+        guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw QuotaFetchError.invalidCredentials
+        }
+
+        let oauthKey: String?
+        let oauthObject: [String: Any]
+        if let nested = root["claudeAiOauth"] as? [String: Any] {
+            oauthKey = "claudeAiOauth"
+            oauthObject = nested
+        } else if root["accessToken"] != nil || root["access_token"] != nil {
+            oauthKey = nil
+            oauthObject = root
+        } else {
+            throw QuotaFetchError.missingOAuth
+        }
+
+        let oauth = try ClaudeOAuthCredentials(object: oauthObject)
+        return ParsedClaudeCredentials(root: root, oauthKey: oauthKey, oauthObject: oauthObject, oauth: oauth)
+    }
+
+    private func encodedCredentials(from parsed: ParsedClaudeCredentials) throws -> String {
+        var root = parsed.root
+        if let oauthKey = parsed.oauthKey {
+            root[oauthKey] = parsed.oauthObject
+        } else {
+            root = parsed.oauthObject
+        }
+
+        guard JSONSerialization.isValidJSONObject(root) else {
+            throw QuotaFetchError.invalidCredentials
+        }
+
+        let data = try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys])
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw QuotaFetchError.invalidCredentials
+        }
+        return string
+    }
+
+    private func refreshAndStoreOAuthCredentials(_ parsed: inout ParsedClaudeCredentials, for account: ManagedAccount) async throws {
+        try await refreshOAuthCredentials(&parsed)
+        let updatedCredentials = try encodedCredentials(from: parsed)
+        try writeAccountCredentials(number: String(account.number), email: account.record.email, credentials: updatedCredentials)
+        if account.isActive {
+            try writeCurrentCredentials(updatedCredentials)
+        }
+    }
+
+    private func refreshOAuthCredentials(_ parsed: inout ParsedClaudeCredentials) async throws {
+        guard let refreshToken = parsed.oauth.refreshToken, !refreshToken.isEmpty else {
+            throw QuotaFetchError.missingRefreshToken
+        }
+
+        var request = URLRequest(url: anthropicOAuthTokenURL)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+
+        let scopes = parsed.oauth.scopes.isEmpty
+            ? [claudeAIProfileScope, claudeAIInferenceScope, "user:sessions:claude_code", "user:mcp_servers", "user:file_upload"]
+            : parsed.oauth.scopes
+        let clientID = parsed.oauth.clientID?.isEmpty == false ? parsed.oauth.clientID! : anthropicOAuthClientID
+        let body: [String: String] = [
+            "grant_type": "refresh_token",
+            "refresh_token": refreshToken,
+            "client_id": clientID,
+            "scope": scopes.joined(separator: " ")
+        ]
+        request.httpBody = formURLEncoded(body).data(using: .utf8)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw QuotaFetchError.invalidResponse
+        }
+
+        guard (200..<300).contains(http.statusCode) else {
+            throw QuotaFetchError.httpStatus(http.statusCode, errorMessage(from: data))
+        }
+
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let accessToken = stringValue(object["access_token"]),
+              !accessToken.isEmpty
+        else {
+            throw QuotaFetchError.invalidResponse
+        }
+
+        let newRefreshToken = stringValue(object["refresh_token"]) ?? refreshToken
+        let expiresIn = numberValue(object["expires_in"]) ?? 3600
+        let expiresAt = Date().addingTimeInterval(expiresIn).timeIntervalSince1970 * 1000
+        let responseScopes = scopesValue(object["scope"]) ?? scopes
+
+        parsed.oauth.accessToken = accessToken
+        parsed.oauth.refreshToken = newRefreshToken
+        parsed.oauth.expiresAt = expiresAt
+        parsed.oauth.scopes = responseScopes
+        parsed.oauth.clientID = clientID
+
+        parsed.oauthObject["accessToken"] = accessToken
+        parsed.oauthObject["refreshToken"] = newRefreshToken
+        parsed.oauthObject["expiresAt"] = expiresAt
+        parsed.oauthObject["scopes"] = responseScopes
+        parsed.oauthObject["clientId"] = clientID
+    }
+
+    private func fetchUsageObject(accessToken: String) async throws -> [String: Any] {
+        var request = URLRequest(url: anthropicAPIBaseURL.appendingPathComponent("api/oauth/usage"))
+        request.httpMethod = "GET"
+        request.timeoutInterval = 5
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(anthropicOAuthBeta, forHTTPHeaderField: "anthropic-beta")
+        request.setValue("CCAS", forHTTPHeaderField: "User-Agent")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw QuotaFetchError.invalidResponse
+        }
+
+        if http.statusCode == 401 {
+            throw QuotaFetchError.unauthorized
+        }
+
+        guard (200..<300).contains(http.statusCode) else {
+            throw QuotaFetchError.httpStatus(http.statusCode, errorMessage(from: data))
+        }
+
+        guard !data.isEmpty else {
+            return [:]
+        }
+
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw QuotaFetchError.invalidResponse
+        }
+        return object
+    }
+
+    private func usageInfo(from object: [String: Any], plan: ClaudeSubscriptionPlan) -> AccountQuotaInfo {
+        let fiveHour = quotaWindow(from: object["five_hour"])
+        let sevenDay = quotaWindow(from: object["seven_day"])
+        let monetary = monetaryQuota(from: object["extra_usage"])
+
+        switch plan {
+        case .pro, .max:
+            if fiveHour != nil || sevenDay != nil {
+                return .personal(plan: plan, fiveHour: fiveHour, sevenDay: sevenDay)
+            }
+            if let monetary {
+                return .monetary(plan: plan, quota: monetary)
+            }
+        case .team, .enterprise:
+            if let monetary {
+                return .monetary(plan: plan, quota: monetary)
+            }
+            if fiveHour != nil || sevenDay != nil {
+                return .personal(plan: plan, fiveHour: fiveHour, sevenDay: sevenDay)
+            }
+        case .unknown:
+            if let monetary, fiveHour == nil, sevenDay == nil {
+                return .monetary(plan: plan, quota: monetary)
+            }
+            if fiveHour != nil || sevenDay != nil {
+                return .personal(plan: plan, fiveHour: fiveHour, sevenDay: sevenDay)
+            }
+        }
+
+        return .unavailable(L10n.string(.quotaNoData))
+    }
+
+    private func quotaWindow(from value: Any?) -> QuotaWindow? {
+        guard let object = value as? [String: Any] else {
+            return nil
+        }
+        guard let rawUtilization = numberValue(object["used_percentage"])
+            ?? numberValue(object["utilization"]) else {
+            return nil
+        }
+
+        let usedPercentage = rawUtilization <= 1 ? rawUtilization * 100 : rawUtilization
+        let resetsAt = dateValue(object["resets_at"])
+            ?? dateValue(object["reset_at"])
+            ?? dateValue(object["resetsAt"])
+        return QuotaWindow(usedPercentage: usedPercentage, resetsAt: resetsAt)
+    }
+
+    private func monetaryQuota(from value: Any?) -> MonetaryQuota? {
+        guard let object = value as? [String: Any] else {
+            return nil
+        }
+
+        let used = numberValue(object["used_credits"])
+            ?? numberValue(object["used_minor_units"])
+            ?? numberValue(object["used"])
+        let limit = numberValue(object["monthly_limit"])
+            ?? numberValue(object["monthly_credit_limit"])
+            ?? numberValue(object["limit"])
+        var usedPercentage = numberValue(object["utilization"])
+            ?? numberValue(object["used_percentage"])
+
+        if let percentage = usedPercentage, percentage <= 1 {
+            usedPercentage = percentage * 100
+        } else if usedPercentage == nil, let used, let limit, limit > 0 {
+            usedPercentage = used / limit * 100
+        }
+
+        let isEnabled = boolValue(object["is_enabled"]) ?? true
+        guard isEnabled || used != nil || limit != nil || usedPercentage != nil else {
+            return nil
+        }
+
+        let currency = stringValue(object["currency"]) ?? "USD"
+        let resetsAt = dateValue(object["resets_at"])
+            ?? dateValue(object["reset_at"])
+            ?? dateValue(object["resetsAt"])
+            ?? dateValue(object["current_period_end"])
+            ?? nextMonthlyReset()
+
+        return MonetaryQuota(
+            usedMinorUnits: used,
+            limitMinorUnits: limit,
+            usedPercentage: usedPercentage,
+            currency: currency,
+            resetsAt: resetsAt
+        )
+    }
+
+    private func errorMessage(from data: Data) -> String {
+        guard !data.isEmpty,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return L10n.string(.quotaUnavailable)
+        }
+
+        if let error = object["error"] as? [String: Any],
+           let message = stringValue(error["message"]) {
+            return message
+        }
+
+        for key in ["message", "detail"] {
+            if let message = stringValue(object[key]) {
+                return message
+            }
+        }
+
+        return L10n.string(.quotaUnavailable)
+    }
+
+    private func formURLEncoded(_ values: [String: String]) -> String {
+        values
+            .map { key, value in
+                "\(urlFormEscape(key))=\(urlFormEscape(value))"
+            }
+            .joined(separator: "&")
+    }
+
+    private func urlFormEscape(_ value: String) -> String {
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: "&+=?")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+    }
+
+    private func nextMonthlyReset() -> Date? {
+        let calendar = Calendar.current
+        let now = Date()
+        guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: now) else {
+            return nil
+        }
+        return calendar.date(from: calendar.dateComponents([.year, .month], from: nextMonth))
+    }
+
+    private func stringValue(_ value: Any?) -> String? {
+        if let value = value as? String {
+            return value
+        }
+        return nil
+    }
+
+    private func numberValue(_ value: Any?) -> Double? {
+        if let value = value as? Double {
+            return value
+        }
+        if let value = value as? Int {
+            return Double(value)
+        }
+        if let value = value as? NSNumber {
+            return value.doubleValue
+        }
+        if let value = value as? String {
+            return Double(value)
+        }
+        return nil
+    }
+
+    private func boolValue(_ value: Any?) -> Bool? {
+        if let value = value as? Bool {
+            return value
+        }
+        if let value = value as? NSNumber {
+            return value.boolValue
+        }
+        if let value = value as? String {
+            switch value.lowercased() {
+            case "true", "1":
+                return true
+            case "false", "0":
+                return false
+            default:
+                return nil
+            }
+        }
+        return nil
+    }
+
+    private func scopesValue(_ value: Any?) -> [String]? {
+        if let values = value as? [String] {
+            return values
+        }
+        if let value = value as? String {
+            return value.split(separator: " ").map(String.init)
+        }
+        return nil
+    }
+
+    private func dateValue(_ value: Any?) -> Date? {
+        if let number = numberValue(value) {
+            if number > 10_000_000_000 {
+                return Date(timeIntervalSince1970: number / 1000)
+            }
+            return Date(timeIntervalSince1970: number)
+        }
+
+        guard let string = stringValue(value), !string.isEmpty else {
+            return nil
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: string) {
+            return date
+        }
+
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: string)
+    }
+}
+
+private struct ParsedClaudeCredentials {
+    var root: [String: Any]
+    var oauthKey: String?
+    var oauthObject: [String: Any]
+    var oauth: ClaudeOAuthCredentials
+}
+
+private struct ClaudeOAuthCredentials {
+    var accessToken: String
+    var refreshToken: String?
+    var expiresAt: Double?
+    var scopes: [String]
+    var subscriptionType: String?
+    var rateLimitTier: String?
+    var clientID: String?
+
+    init(object: [String: Any]) throws {
+        guard let accessToken = Self.stringValue(object["accessToken"])
+            ?? Self.stringValue(object["access_token"]),
+              !accessToken.isEmpty else {
+            throw QuotaFetchError.missingOAuth
+        }
+
+        self.accessToken = accessToken
+        refreshToken = Self.stringValue(object["refreshToken"])
+            ?? Self.stringValue(object["refresh_token"])
+        expiresAt = Self.numberValue(object["expiresAt"])
+            ?? Self.numberValue(object["expires_at"])
+            ?? Self.numberValue(object["expiry_date"])
+        scopes = Self.scopesValue(object["scopes"])
+            ?? Self.scopesValue(object["scope"])
+            ?? []
+        subscriptionType = Self.stringValue(object["subscriptionType"])
+            ?? Self.stringValue(object["subscription_type"])
+        rateLimitTier = Self.stringValue(object["rateLimitTier"])
+            ?? Self.stringValue(object["rate_limit_tier"])
+        clientID = Self.stringValue(object["clientId"])
+            ?? Self.stringValue(object["client_id"])
+    }
+
+    var plan: ClaudeSubscriptionPlan {
+        ClaudeSubscriptionPlan(rawValue: subscriptionType)
+    }
+
+    var isExpiringSoon: Bool {
+        guard let expiresAt else {
+            return false
+        }
+        let expiryDate: Date
+        if expiresAt > 10_000_000_000 {
+            expiryDate = Date(timeIntervalSince1970: expiresAt / 1000)
+        } else {
+            expiryDate = Date(timeIntervalSince1970: expiresAt)
+        }
+        return Date().addingTimeInterval(300) >= expiryDate
+    }
+
+    private static func stringValue(_ value: Any?) -> String? {
+        value as? String
+    }
+
+    private static func numberValue(_ value: Any?) -> Double? {
+        if let value = value as? Double {
+            return value
+        }
+        if let value = value as? Int {
+            return Double(value)
+        }
+        if let value = value as? NSNumber {
+            return value.doubleValue
+        }
+        if let value = value as? String {
+            return Double(value)
+        }
+        return nil
+    }
+
+    private static func scopesValue(_ value: Any?) -> [String]? {
+        if let values = value as? [String] {
+            return values
+        }
+        if let value = value as? String {
+            return value.split(separator: " ").map(String.init)
+        }
+        return nil
+    }
+}
+
+private enum QuotaFetchError: LocalizedError {
+    case missingOAuth
+    case missingRefreshToken
+    case invalidCredentials
+    case invalidResponse
+    case unauthorized
+    case httpStatus(Int, String)
+
+    var errorDescription: String? {
+        switch self {
+        case .missingOAuth:
+            return L10n.string(.quotaUnavailable)
+        case .missingRefreshToken:
+            return L10n.string(.quotaUnavailable)
+        case .invalidCredentials:
+            return L10n.string(.quotaUnavailable)
+        case .invalidResponse:
+            return L10n.string(.quotaUnavailable)
+        case .unauthorized:
+            return L10n.string(.quotaUnavailable)
+        case .httpStatus(_, let message):
+            return message
         }
     }
 }
