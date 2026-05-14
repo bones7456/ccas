@@ -30,8 +30,19 @@ CCAS is not affiliated with Anthropic or Claude.
 ## Requirements
 
 - macOS 14 or later.
-- Xcode with Swift 6 support.
 - Claude Code installed and signed in at least once.
+- Xcode with Swift 6 support — only needed if you want to build from source.
+
+## Install
+
+Download the latest release from the [GitHub Releases page](https://github.com/bones7456/ccas/releases/latest). Two formats are published for each version:
+
+- `CCAS-x.y.z.dmg` — double-click the DMG, then drag `CCAS.app` into the `Applications` shortcut.
+- `CCAS-x.y.z.zip` — unzip and move `CCAS.app` into `/Applications`.
+
+Both downloads are signed with an Apple Developer ID certificate and notarized by Apple, so the first launch will not show an "unidentified developer" warning.
+
+Launch CCAS from Launchpad or `/Applications`. The app runs as a menu bar utility — look for the CCAS icon near the clock in the top-right of the screen.
 
 ## Build
 

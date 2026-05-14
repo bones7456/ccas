@@ -30,8 +30,19 @@ CCAS 与 Anthropic 或 Claude 官方没有关联。
 ## 环境要求
 
 - macOS 14 或更高版本。
-- 支持 Swift 6 的 Xcode。
 - 已安装 Claude Code，并且至少完成过一次登录。
+- 支持 Swift 6 的 Xcode —— 仅在需要从源码构建时才用得到。
+
+## 下载与安装
+
+从 [GitHub Releases 页面](https://github.com/bones7456/ccas/releases/latest)下载最新版本，每个版本会发布两种格式：
+
+- `CCAS-x.y.z.dmg`：双击打开，把 `CCAS.app` 拖到弹出窗口里的 `Applications` 快捷方式上。
+- `CCAS-x.y.z.zip`：解压后把 `CCAS.app` 拖到 `/Applications`。
+
+两个安装包都使用 Apple Developer ID 证书签名并通过 Apple 公证，首次打开不会出现「无法验证开发者」之类的警告。
+
+从 Launchpad 或 `/Applications` 启动 CCAS。应用以菜单栏小工具的形式运行 —— 在屏幕右上角时钟附近能看到 CCAS 图标。
 
 ## 构建
 
