@@ -28,6 +28,10 @@ struct DebugLogger {
     #endif
 }
 
+protocol DebugLogDescribing {
+    var debugLogDescription: String { get }
+}
+
 struct AccountRecord: Codable, Equatable {
     var email: String
     var uuid: String

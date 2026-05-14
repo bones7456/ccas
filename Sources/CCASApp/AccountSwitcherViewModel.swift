@@ -44,6 +44,9 @@ final class AccountSwitcherViewModel: ObservableObject {
     private let logger = DebugLogger(category: "ViewModel")
     private var quotaTask: Task<Void, Never>?
     private var quotaRefreshGeneration = 0
+    private var lastQuotaSuccessAt: [Int: Date] = [:]
+    private var quotaRateLimitedUntil: [Int: Date] = [:]
+    private static let quotaRefreshCooldown: TimeInterval = 60
 
     init(store: ClaudeAccountStore = ClaudeAccountStore()) {
         self.store = store
@@ -190,22 +193,43 @@ final class AccountSwitcherViewModel: ObservableObject {
                     return
                 }
 
+                if let blockedUntil = self.quotaRateLimitedUntil[account.number],
+                   blockedUntil > Date() {
+                    let remaining = Int(blockedUntil.timeIntervalSinceNow.rounded())
+                    self.logger.notice("usage refresh account skipped reason=rateLimited number=\(account.number) retryInSeconds=\(remaining)")
+                    continue
+                }
+
+                if let lastSuccess = self.lastQuotaSuccessAt[account.number],
+                   self.hasLoadedQuotaState(for: account.number) {
+                    let age = Date().timeIntervalSince(lastSuccess)
+                    if age < Self.quotaRefreshCooldown {
+                        self.logger.notice("usage refresh account skipped reason=recentlySucceeded number=\(account.number) ageSeconds=\(Int(age))")
+                        continue
+                    }
+                }
+
                 do {
                     let info = try await self.store.usageInfo(for: account)
                     guard !Task.isCancelled else {
                         return
                     }
                     self.setQuotaState(.loaded(info), for: account.number)
+                    self.lastQuotaSuccessAt[account.number] = Date()
+                    self.quotaRateLimitedUntil[account.number] = nil
                     didUpdate = true
                     self.logger.notice("usage refresh account done number=\(account.number)")
                 } catch {
                     guard !Task.isCancelled else {
                         return
                     }
+                    if case QuotaFetchError.rateLimited(let retryAfter, _) = error {
+                        self.quotaRateLimitedUntil[account.number] = retryAfter
+                    }
                     if !self.hasLoadedQuotaState(for: account.number) {
                         self.setQuotaState(.failed(error.localizedDescription), for: account.number)
                     }
-                    self.logger.error("usage refresh account failed number=\(account.number) errorType=\(String(describing: type(of: error)))")
+                    self.logger.error("usage refresh account failed number=\(account.number) errorType=\(String(describing: type(of: error))) reason=\(Self.debugLogDescription(for: error))")
                 }
             }
 
@@ -232,6 +256,7 @@ final class AccountSwitcherViewModel: ObservableObject {
                 continue
             }
             cachedStates[number] = .loaded(info)
+            lastQuotaSuccessAt[number] = snapshot.updatedAt
         }
 
         quotaStates = cachedStates
@@ -273,6 +298,15 @@ final class AccountSwitcherViewModel: ObservableObject {
             return true
         }
         return false
+    }
+
+    private static func debugLogDescription(for error: Error) -> String {
+        if let error = error as? DebugLogDescribing {
+            return error.debugLogDescription
+        }
+
+        let description = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return description.isEmpty ? String(describing: error) : description
     }
 
     private func recordQuotaCacheUpdate(for accounts: [ManagedAccount]) {

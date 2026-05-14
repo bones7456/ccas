@@ -330,14 +330,19 @@ final class ClaudeAccountStore {
         }
 
         var parsed = try parseClaudeCredentials(credentials)
+        logger.notice("usage info credentialsParsed number=\(account.number) scopes=\(parsed.oauth.scopes.count) hasRefreshToken=\(parsed.oauth.refreshToken?.isEmpty == false) isExpiringSoon=\(parsed.oauth.isExpiringSoon)")
         guard parsed.oauth.scopes.contains(claudeAIProfileScope) else {
             logger.notice("usage info unavailable missingProfileScope number=\(account.number)")
             return .unavailable(L10n.string(.quotaUnavailable))
         }
 
         if parsed.oauth.isExpiringSoon {
+            logger.notice("usage info refreshingExpiringToken number=\(account.number)")
             try await refreshAndStoreOAuthCredentials(&parsed, for: account)
+            logger.notice("usage info tokenRefreshed number=\(account.number)")
         }
+
+        logger.notice("usage info fetchingUsage number=\(account.number)")
 
         do {
             let object = try await fetchUsageObject(accessToken: parsed.oauth.accessToken)
@@ -629,10 +634,21 @@ final class ClaudeAccountStore {
 
     private func parseClaudeCredentials(_ credentials: String) throws -> ParsedClaudeCredentials {
         guard let data = credentials.data(using: .utf8) else {
+            logger.error("parse credentials failed reason=utf8EncodeFailed length=\(credentials.count)")
             throw QuotaFetchError.invalidCredentials
         }
 
-        guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        let rootObject: Any
+        do {
+            rootObject = try JSONSerialization.jsonObject(with: data)
+        } catch {
+            let preview = String(credentials.prefix(256))
+            logger.error("parse credentials failed reason=jsonParseFailed:\(error.localizedDescription) length=\(credentials.count) preview=\(preview)")
+            throw error
+        }
+
+        guard let root = rootObject as? [String: Any] else {
+            logger.error("parse credentials failed reason=notDictionary:\(type(of: rootObject))")
             throw QuotaFetchError.invalidCredentials
         }
 
@@ -705,17 +721,28 @@ final class ClaudeAccountStore {
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
+            logger.error("oauth refresh response notHTTP")
             throw QuotaFetchError.invalidResponse
         }
 
         guard (200..<300).contains(http.statusCode) else {
+            logUsageResponseDiagnostics(http: http, data: data, reason: "oauthRefreshHttpStatus")
             throw QuotaFetchError.httpStatus(http.statusCode, errorMessage(from: data))
         }
 
-        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+        let refreshObject: Any
+        do {
+            refreshObject = try JSONSerialization.jsonObject(with: data)
+        } catch {
+            logUsageResponseDiagnostics(http: http, data: data, reason: "oauthRefreshJsonParseFailed:\(error.localizedDescription)")
+            throw error
+        }
+
+        guard let object = refreshObject as? [String: Any],
               let accessToken = stringValue(object["access_token"]),
               !accessToken.isEmpty
         else {
+            logUsageResponseDiagnostics(http: http, data: data, reason: "oauthRefreshMissingAccessToken type=\(type(of: refreshObject))")
             throw QuotaFetchError.invalidResponse
         }
 
@@ -756,7 +783,14 @@ final class ClaudeAccountStore {
             throw QuotaFetchError.unauthorized
         }
 
+        if http.statusCode == 429 {
+            let retryAfter = retryAfterDate(from: http) ?? Date().addingTimeInterval(60)
+            logUsageResponseDiagnostics(http: http, data: data, reason: "usageRateLimited retryAfterSec=\(Int(retryAfter.timeIntervalSinceNow.rounded()))")
+            throw QuotaFetchError.rateLimited(retryAfter: retryAfter, message: errorMessage(from: data))
+        }
+
         guard (200..<300).contains(http.statusCode) else {
+            logUsageResponseDiagnostics(http: http, data: data, reason: "usageHttpStatus")
             throw QuotaFetchError.httpStatus(http.statusCode, errorMessage(from: data))
         }
 
@@ -764,10 +798,31 @@ final class ClaudeAccountStore {
             return [:]
         }
 
-        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        let parsed: Any
+        do {
+            parsed = try JSONSerialization.jsonObject(with: data)
+        } catch {
+            logUsageResponseDiagnostics(http: http, data: data, reason: "jsonParseFailed:\(error.localizedDescription)")
+            throw error
+        }
+
+        guard let object = parsed as? [String: Any] else {
+            logUsageResponseDiagnostics(http: http, data: data, reason: "notDictionary:\(type(of: parsed))")
             throw QuotaFetchError.invalidResponse
         }
         return object
+    }
+
+    private func logUsageResponseDiagnostics(http: HTTPURLResponse, data: Data, reason: String) {
+        let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? "<none>"
+        let bodyPreview: String = {
+            let limit = 512
+            if let text = String(data: data.prefix(limit), encoding: .utf8) {
+                return text
+            }
+            return data.prefix(limit).map { String(format: "%02x", $0) }.joined()
+        }()
+        logger.error("usage response unparsable reason=\(reason) status=\(http.statusCode) contentType=\(contentType) bodyBytes=\(data.count) bodyPreview=\(bodyPreview)")
     }
 
     private func usageInfo(from object: [String: Any], plan: ClaudeSubscriptionPlan) -> AccountQuotaInfo {
@@ -859,10 +914,10 @@ final class ClaudeAccountStore {
         )
     }
 
-    private func errorMessage(from data: Data) -> String {
+    private func errorMessage(from data: Data) -> String? {
         guard !data.isEmpty,
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return L10n.string(.quotaUnavailable)
+            return nil
         }
 
         if let error = object["error"] as? [String: Any],
@@ -876,7 +931,7 @@ final class ClaudeAccountStore {
             }
         }
 
-        return L10n.string(.quotaUnavailable)
+        return nil
     }
 
     private func formURLEncoded(_ values: [String: String]) -> String {
@@ -900,6 +955,23 @@ final class ClaudeAccountStore {
             return nil
         }
         return calendar.date(from: calendar.dateComponents([.year, .month], from: nextMonth))
+    }
+
+    private func retryAfterDate(from http: HTTPURLResponse) -> Date? {
+        guard let raw = http.value(forHTTPHeaderField: "Retry-After")?
+            .trimmingCharacters(in: .whitespaces), !raw.isEmpty else {
+            return nil
+        }
+
+        if let seconds = TimeInterval(raw) {
+            return Date().addingTimeInterval(max(0, seconds))
+        }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "GMT")
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+        return formatter.date(from: raw)
     }
 
     private func stringValue(_ value: Any?) -> String? {
@@ -1066,13 +1138,14 @@ private struct ClaudeOAuthCredentials {
     }
 }
 
-private enum QuotaFetchError: LocalizedError {
+enum QuotaFetchError: LocalizedError, DebugLogDescribing {
     case missingOAuth
     case missingRefreshToken
     case invalidCredentials
     case invalidResponse
     case unauthorized
-    case httpStatus(Int, String)
+    case rateLimited(retryAfter: Date, message: String?)
+    case httpStatus(Int, String?)
 
     var errorDescription: String? {
         switch self {
@@ -1086,8 +1159,37 @@ private enum QuotaFetchError: LocalizedError {
             return L10n.string(.quotaUnavailable)
         case .unauthorized:
             return L10n.string(.quotaUnavailable)
+        case .rateLimited(_, let message):
+            return message ?? L10n.string(.quotaUnavailable)
         case .httpStatus(_, let message):
-            return message
+            return message ?? L10n.string(.quotaUnavailable)
+        }
+    }
+
+    var debugLogDescription: String {
+        switch self {
+        case .missingOAuth:
+            return "OAuth credentials are missing or do not contain an access token."
+        case .missingRefreshToken:
+            return "OAuth refresh token is missing."
+        case .invalidCredentials:
+            return "Stored credentials JSON is invalid."
+        case .invalidResponse:
+            return "Quota service returned an invalid response."
+        case .unauthorized:
+            return "Quota service rejected the access token with HTTP 401."
+        case .rateLimited(let retryAfter, let message):
+            let seconds = Int(retryAfter.timeIntervalSinceNow.rounded())
+            let base = "Quota service rate limited; retry in \(seconds)s"
+            if let message {
+                return "\(base) (\(message))"
+            }
+            return base
+        case .httpStatus(let statusCode, let message):
+            if let message {
+                return "Quota service returned HTTP \(statusCode): \(message)"
+            }
+            return "Quota service returned HTTP \(statusCode) without an error message."
         }
     }
 }
