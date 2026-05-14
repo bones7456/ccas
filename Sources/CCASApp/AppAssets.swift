@@ -22,19 +22,10 @@ enum AppAssets {
     }
 
     private static func loadImage(named name: String) -> NSImage? {
-        var bundles = [Bundle.main]
-
-        #if SWIFT_PACKAGE
-        bundles.insert(Bundle.module, at: 0)
-        #endif
-
-        for bundle in bundles {
-            if let url = bundle.url(forResource: name, withExtension: "png"),
-               let image = NSImage(contentsOf: url) {
-                return image
-            }
+        guard let url = Bundle.main.url(forResource: name, withExtension: "png"),
+              let image = NSImage(contentsOf: url) else {
+            return nil
         }
-
-        return nil
+        return image
     }
 }
