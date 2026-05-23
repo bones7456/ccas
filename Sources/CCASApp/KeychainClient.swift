@@ -21,20 +21,15 @@ final class KeychainClient {
     private let logger = DebugLogger(category: "Keychain")
 
     func readGenericPasswordItem(service: String) throws -> KeychainPasswordItem? {
-        logger.notice("read item service=\(service)")
-
         let metadata = try genericPasswordMetadata(service: service)
         guard metadata.found else {
-            logger.notice("read item service=\(service) status=notFound")
             return nil
         }
 
         guard let password = try readGenericPassword(service: service, account: metadata.account) else {
-            logger.notice("read item service=\(service) status=success emptyResult=true")
             return nil
         }
 
-        logger.notice("read item service=\(service) status=success hasAccount=\((metadata.account?.isEmpty == false))")
         return KeychainPasswordItem(
             account: metadata.account?.isEmpty == false ? metadata.account! : NSUserName(),
             password: password
@@ -42,9 +37,6 @@ final class KeychainClient {
     }
 
     func readGenericPassword(service: String, account: String? = nil) throws -> String? {
-        let hasAccountFilter = account != nil
-        logger.notice("read password service=\(service) hasAccountFilter=\(hasAccountFilter)")
-
         var arguments = ["find-generic-password", "-s", service, "-w"]
         if let account {
             arguments.insert(contentsOf: ["-a", account], at: 1)
@@ -52,35 +44,26 @@ final class KeychainClient {
 
         let result = try runSecurity(arguments)
         if Self.isNotFound(result) {
-            logger.notice("read password service=\(service) hasAccountFilter=\(hasAccountFilter) status=notFound")
             return nil
         }
 
         guard result.terminationStatus == 0 else {
             let message = Self.message(for: result)
-            logger.error("read password service=\(service) hasAccountFilter=\(hasAccountFilter) status=\(result.terminationStatus) message=\(message)")
+            logger.error("read password failed service=\(service) status=\(result.terminationStatus) message=\(message)")
             throw AccountSwitcherError.keychain(message)
         }
 
-        guard let password = Self.passwordString(from: result.output) else {
-            logger.notice("read password service=\(service) hasAccountFilter=\(hasAccountFilter) status=success emptyResult=true")
-            return nil
-        }
-
-        logger.notice("read password service=\(service) hasAccountFilter=\(hasAccountFilter) status=success")
-        return password
+        return Self.passwordString(from: result.output)
     }
 
     func upsertGenericPassword(service: String, account: String, password: String) throws {
-        logger.notice("upsert password service=\(service)")
-
         guard let data = password.data(using: .utf8) else {
             throw AccountSwitcherError.keychain(L10n.string(.errorCredentialEncoding))
         }
 
         let removed = try removeAllMatching(service: service, account: account)
-        if removed > 0 {
-            logger.notice("upsert password service=\(service) removedExisting=\(removed)")
+        if removed > 1 {
+            logger.notice("cleaned duplicate keychain entries service=\(service) count=\(removed)")
         }
 
         let result = try runSecurity([
@@ -92,16 +75,12 @@ final class KeychainClient {
 
         guard result.terminationStatus == 0 else {
             let message = Self.message(for: result)
-            logger.error("upsert password service=\(service) status=\(result.terminationStatus) message=\(message)")
+            logger.error("upsert password failed service=\(service) status=\(result.terminationStatus) message=\(message)")
             throw AccountSwitcherError.keychain(message)
         }
-
-        logger.notice("upsert password service=\(service) status=upserted")
     }
 
     func upsertGenericPasswordForService(service: String, fallbackAccount: String, password: String) throws {
-        logger.notice("upsert password by service service=\(service) hasFallbackAccount=\((!fallbackAccount.isEmpty))")
-
         guard let data = password.data(using: .utf8) else {
             throw AccountSwitcherError.keychain(L10n.string(.errorCredentialEncoding))
         }
@@ -110,8 +89,8 @@ final class KeychainClient {
         let account = metadata.found ? (metadata.account ?? "") : fallbackAccount
 
         let removed = try removeAllMatching(service: service, account: account)
-        if removed > 0 {
-            logger.notice("upsert password by service service=\(service) removedExisting=\(removed)")
+        if removed > 1 {
+            logger.notice("cleaned duplicate keychain entries service=\(service) count=\(removed)")
         }
 
         let result = try runSecurity([
@@ -123,11 +102,9 @@ final class KeychainClient {
 
         guard result.terminationStatus == 0 else {
             let message = Self.message(for: result)
-            logger.error("upsert password by service service=\(service) hasFallbackAccount=\((!fallbackAccount.isEmpty)) status=\(result.terminationStatus) message=\(message)")
+            logger.error("upsert password failed service=\(service) status=\(result.terminationStatus) message=\(message)")
             throw AccountSwitcherError.keychain(message)
         }
-
-        logger.notice("upsert password by service service=\(service) status=upserted hasFallbackAccount=\((!fallbackAccount.isEmpty))")
     }
 
     private func removeAllMatching(service: String, account: String) throws -> Int {
@@ -145,21 +122,19 @@ final class KeychainClient {
 
             guard result.terminationStatus == 0 else {
                 let message = Self.message(for: result)
-                logger.error("remove duplicates service=\(service) status=\(result.terminationStatus) message=\(message)")
+                logger.error("remove duplicates failed service=\(service) status=\(result.terminationStatus) message=\(message)")
                 throw AccountSwitcherError.keychain(message)
             }
 
             removed += 1
             if removed > 64 {
-                logger.error("remove duplicates service=\(service) abortedAfter=\(removed)")
+                logger.error("remove duplicates aborted service=\(service) afterCount=\(removed)")
                 return removed
             }
         }
     }
 
     func deleteGenericPassword(service: String, account: String) throws {
-        logger.notice("delete password service=\(service)")
-
         let result = try runSecurity([
             "delete-generic-password",
             "-s", service,
@@ -167,12 +142,11 @@ final class KeychainClient {
         ])
 
         if result.terminationStatus == 0 || Self.isNotFound(result) {
-            logger.notice("delete password service=\(service) status=\(result.terminationStatus == 0 ? "deleted" : "notFound")")
             return
         }
 
         let message = Self.message(for: result)
-        logger.error("delete password service=\(service) status=\(result.terminationStatus) message=\(message)")
+        logger.error("delete password failed service=\(service) status=\(result.terminationStatus) message=\(message)")
         throw AccountSwitcherError.keychain(message)
     }
 
@@ -188,7 +162,7 @@ final class KeychainClient {
 
         guard result.terminationStatus == 0 else {
             let message = Self.message(for: result)
-            logger.error("read item metadata service=\(service) status=\(result.terminationStatus) message=\(message)")
+            logger.error("read metadata failed service=\(service) status=\(result.terminationStatus) message=\(message)")
             throw AccountSwitcherError.keychain(message)
         }
 
@@ -277,7 +251,46 @@ final class KeychainClient {
                 bytes.removeLast()
             }
         }
-        return String(data: Data(bytes), encoding: .utf8)
+        let trimmed = Data(bytes)
+
+        if let decoded = decodedFromHexOutput(trimmed) {
+            return decoded
+        }
+        return String(data: trimmed, encoding: .utf8)
+    }
+
+    // `/usr/bin/security ... -w` prints the password as lowercase hex (no
+    // `0x` prefix) whenever the stored bytes include anything outside the
+    // printable ASCII range 0x20–0x7E. Claude Code pretty-prints its
+    // credentials JSON, so the embedded newlines trigger that path.
+    private static func decodedFromHexOutput(_ data: Data) -> String? {
+        guard data.count >= 2, data.count % 2 == 0 else {
+            return nil
+        }
+
+        var decoded = Data(capacity: data.count / 2)
+        var high: UInt8 = 0
+        var haveHigh = false
+
+        for byte in data {
+            let nibble: UInt8
+            switch byte {
+            case 0x30...0x39: nibble = byte - 0x30
+            case 0x61...0x66: nibble = byte - 0x61 + 10
+            case 0x41...0x46: nibble = byte - 0x41 + 10
+            default: return nil
+            }
+
+            if haveHigh {
+                decoded.append((high << 4) | nibble)
+                haveHigh = false
+            } else {
+                high = nibble
+                haveHigh = true
+            }
+        }
+
+        return String(data: decoded, encoding: .utf8)
     }
 
     private static func hexString(from data: Data) -> String {

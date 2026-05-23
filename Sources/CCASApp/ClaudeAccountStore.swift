@@ -49,24 +49,18 @@ final class ClaudeAccountStore {
 
     func currentIdentity() throws -> AccountIdentity? {
         let configURL = claudeConfigURL()
-        logger.notice("current identity read config")
         guard fileManager.fileExists(atPath: configURL.path) else {
-            logger.notice("current identity configMissing")
             return nil
         }
 
         let config = try readJSONObject(configURL)
         guard let oauth = config["oauthAccount"] as? [String: Any] else {
-            logger.notice("current identity missingOAuth")
             return nil
         }
 
         guard let email = oauth["emailAddress"] as? String, !email.isEmpty else {
-            logger.notice("current identity missingEmail")
             return nil
         }
-
-        logger.notice("current identity found hasEmail=\((!email.isEmpty))")
 
         return AccountIdentity(
             email: email,
@@ -77,17 +71,15 @@ final class ClaudeAccountStore {
     }
 
     func listAccounts() throws -> [ManagedAccount] {
-        logger.notice("list accounts start")
         try migrateOrganizationFieldsIfNeeded()
 
         guard let data = try readSequenceIfPresent() else {
-            logger.notice("list accounts noSequence")
             return []
         }
 
         let identity = try currentIdentity()
 
-        let accounts: [ManagedAccount] = data.sequence.compactMap { number in
+        return data.sequence.compactMap { number in
             guard let record = data.accounts[String(number)] else {
                 return nil
             }
@@ -102,40 +94,33 @@ final class ClaudeAccountStore {
 
             return ManagedAccount(number: number, record: record, isActive: isActive)
         }
-
-        logger.notice("list accounts done count=\(accounts.count) activeNumber=\((data.activeAccountNumber.map(String.init) ?? "<none>"))")
-        return accounts
     }
 
     @discardableResult
     func addCurrentAccount() throws -> AddAccountResult {
-        logger.notice("add current account start")
         try setupDirectories()
         try initializeSequenceFileIfNeeded()
         try migrateOrganizationFieldsIfNeeded()
 
         guard let identity = try currentIdentity() else {
-            logger.error("add current account failed noActiveClaudeAccount")
+            logger.error("add account failed reason=noActiveClaudeAccount")
             throw AccountSwitcherError.noActiveClaudeAccount
         }
-        logger.notice("add current account identity found")
 
         let currentCredentials = try readCurrentCredentials() ?? ""
         guard !currentCredentials.isEmpty else {
-            logger.error("add current account failed noClaudeCredentials")
+            logger.error("add account failed reason=noClaudeCredentials")
             throw AccountSwitcherError.noClaudeCredentials
         }
-        logger.notice("add current account currentCredentials=present")
 
         let configURL = claudeConfigURL()
         guard fileManager.fileExists(atPath: configURL.path) else {
-            logger.error("add current account failed configMissing")
+            logger.error("add account failed reason=configMissing")
             throw AccountSwitcherError.claudeConfigNotFound
         }
 
         let currentConfig = try String(contentsOf: configURL, encoding: .utf8)
         var data = try readSequence()
-        logger.notice("add current account sequenceLoaded count=\(data.accounts.count)")
 
         if let existing = data.accounts.first(where: { _, account in
             account.email == identity.email
@@ -155,7 +140,7 @@ final class ClaudeAccountStore {
             data.lastUpdated = Timestamp.now()
             try writeSequence(data)
 
-            logger.notice("add current account updated number=\(number)")
+            logger.notice("account updated number=\(number)")
             return .updated(ManagedAccount(number: Int(number) ?? 0, record: record, isActive: true))
         }
 
@@ -177,152 +162,128 @@ final class ClaudeAccountStore {
         data.lastUpdated = Timestamp.now()
         try writeSequence(data)
 
-        logger.notice("add current account added number=\(nextNumber)")
+        logger.notice("account added number=\(nextNumber)")
         return .added(ManagedAccount(number: nextNumber, record: record, isActive: true))
     }
 
     func switchToAccount(number: Int) throws {
-        logger.notice("switch account start targetNumber=\(number)")
+        try setupDirectories()
+        try migrateOrganizationFieldsIfNeeded()
 
-        do {
-            try setupDirectories()
-            try migrateOrganizationFieldsIfNeeded()
+        guard try readSequenceIfPresent() != nil else {
+            logger.error("switch account failed reason=noManagedAccounts targetNumber=\(number)")
+            throw AccountSwitcherError.noManagedAccounts
+        }
 
-            guard try readSequenceIfPresent() != nil else {
-                logger.error("switch account failed noManagedAccounts targetNumber=\(number)")
-                throw AccountSwitcherError.noManagedAccounts
+        try FileLock(path: lockFile).withExclusiveLock {
+            var data = try readSequence()
+
+            guard let target = data.accounts[String(number)] else {
+                logger.error("switch account failed reason=accountNotFound targetNumber=\(number)")
+                throw AccountSwitcherError.accountNotFound(number)
             }
 
-            try FileLock(path: lockFile).withExclusiveLock {
-                logger.notice("switch account lockAcquired targetNumber=\(number)")
+            guard let currentIdentity = try currentIdentity() else {
+                logger.error("switch account failed reason=noActiveClaudeAccount targetNumber=\(number)")
+                throw AccountSwitcherError.noActiveClaudeAccount
+            }
 
-                var data = try readSequence()
-                logger.notice("switch account sequenceLoaded accountCount=\(data.accounts.count) activeNumber=\((data.activeAccountNumber.map(String.init) ?? "<none>"))")
+            guard let currentNumber = managedNumber(for: currentIdentity, in: data) else {
+                logger.error("switch account failed reason=currentNotManaged targetNumber=\(number)")
+                throw AccountSwitcherError.accountNotManaged(currentIdentity.email)
+            }
 
-                guard let target = data.accounts[String(number)] else {
-                    logger.error("switch account failed accountNotFound targetNumber=\(number)")
-                    throw AccountSwitcherError.accountNotFound(number)
+            let configURL = claudeConfigURL()
+            guard fileManager.fileExists(atPath: configURL.path) else {
+                logger.error("switch account failed reason=configMissing targetNumber=\(number)")
+                throw AccountSwitcherError.claudeConfigNotFound
+            }
+
+            let originalConfig = try String(contentsOf: configURL, encoding: .utf8)
+
+            var rollbackCredentials = try readAccountCredentials(
+                number: String(currentNumber),
+                email: currentIdentity.email
+            )
+            if rollbackCredentials.isEmpty {
+                rollbackCredentials = try readCurrentCredentials() ?? ""
+
+                guard !rollbackCredentials.isEmpty else {
+                    logger.error("switch account failed reason=missingRollbackCredentials currentNumber=\(currentNumber)")
+                    throw AccountSwitcherError.missingCredentials(currentNumber, currentIdentity.email)
                 }
-                logger.notice("switch account target found targetNumber=\(number)")
 
-                guard let currentIdentity = try currentIdentity() else {
-                    logger.error("switch account failed noActiveClaudeAccount targetNumber=\(number)")
-                    throw AccountSwitcherError.noActiveClaudeAccount
-                }
-                logger.notice("switch account current identity found")
-
-                guard let currentNumber = managedNumber(for: currentIdentity, in: data) else {
-                    logger.error("switch account failed currentNotManaged")
-                    throw AccountSwitcherError.accountNotManaged(currentIdentity.email)
-                }
-                logger.notice("switch account currentNumber=\(currentNumber)")
-
-                let configURL = claudeConfigURL()
-                guard fileManager.fileExists(atPath: configURL.path) else {
-                    logger.error("switch account failed configMissing")
-                    throw AccountSwitcherError.claudeConfigNotFound
-                }
-                logger.notice("switch account configFound")
-
-                let originalConfig = try String(contentsOf: configURL, encoding: .utf8)
-                logger.notice("switch account originalConfigLoaded bytes=\(originalConfig.utf8.count)")
-
-                var rollbackCredentials = try readAccountCredentials(
+                try writeAccountCredentials(
                     number: String(currentNumber),
-                    email: currentIdentity.email
+                    email: currentIdentity.email,
+                    credentials: rollbackCredentials
                 )
-                if rollbackCredentials.isEmpty {
-                    logger.notice("switch account missingRollbackCredentials attemptingRepair currentNumber=\(currentNumber)")
-                    rollbackCredentials = try readCurrentCredentials() ?? ""
-
-                    guard !rollbackCredentials.isEmpty else {
-                        logger.error("switch account failed missingRollbackCredentials repairEmpty currentNumber=\(currentNumber)")
-                        throw AccountSwitcherError.missingCredentials(currentNumber, currentIdentity.email)
-                    }
-
-                    try writeAccountCredentials(
-                        number: String(currentNumber),
-                        email: currentIdentity.email,
-                        credentials: rollbackCredentials
-                    )
-                    logger.notice("switch account rollbackCredentialsRepaired currentNumber=\(currentNumber)")
-                }
-                logger.notice("switch account rollbackCredentials=present currentNumber=\(currentNumber)")
-
-                var wroteCredentials = false
-                var wroteConfig = false
-
-                do {
-                    try writeAccountConfig(
-                        number: String(currentNumber),
-                        email: currentIdentity.email,
-                        config: originalConfig
-                    )
-                    logger.notice("switch account currentConfigBackedUp currentNumber=\(currentNumber)")
-
-                    let targetCredentials = try readAccountCredentials(number: String(number), email: target.email)
-                    let targetConfig = try readAccountConfig(number: String(number), email: target.email)
-                    logger.notice("switch account targetBackupsLoaded credentialsPresent=\((!targetCredentials.isEmpty)) configBytes=\(targetConfig.utf8.count)")
-                    guard !targetConfig.isEmpty else {
-                        logger.error("switch account failed missingTargetConfig targetNumber=\(number)")
-                        throw AccountSwitcherError.missingBackupData(number)
-                    }
-                    guard !targetCredentials.isEmpty else {
-                        logger.error("switch account failed missingTargetCredentials targetNumber=\(number)")
-                        throw AccountSwitcherError.missingCredentials(number, target.email)
-                    }
-
-                    logger.notice("switch account writeCurrentCredentials start targetNumber=\(number)")
-                    try writeCurrentCredentials(targetCredentials)
-                    wroteCredentials = true
-                    logger.notice("switch account writeCurrentCredentials done targetNumber=\(number)")
-
-                    let targetConfigJSON = try parseJSONObject(from: targetConfig, source: configURL)
-                    guard let targetOAuth = targetConfigJSON["oauthAccount"] as? [String: Any] else {
-                        logger.error("switch account failed invalidTargetOAuth targetNumber=\(number)")
-                        throw AccountSwitcherError.invalidBackupConfig(number)
-                    }
-
-                    var currentConfigJSON = try readJSONObject(configURL)
-                    currentConfigJSON["oauthAccount"] = targetOAuth
-                    try writeJSONObject(currentConfigJSON, to: configURL)
-                    wroteConfig = true
-                    logger.notice("switch account configWritten targetNumber=\(number)")
-
-                    data.activeAccountNumber = number
-                    data.lastUpdated = Timestamp.now()
-                    try writeSequence(data)
-                    logger.notice("switch account done targetNumber=\(number)")
-                } catch {
-                    logger.error("switch account innerFailure targetNumber=\(number) wroteCredentials=\(wroteCredentials) wroteConfig=\(wroteConfig) errorType=\(String(describing: type(of: error)))")
-                    if wroteCredentials {
-                        do {
-                            try writeCurrentCredentials(rollbackCredentials)
-                            logger.notice("switch account rollbackCredentialsRestored currentNumber=\(currentNumber)")
-                        } catch {
-                            logger.error("switch account rollbackCredentialsFailed currentNumber=\(currentNumber) errorType=\(String(describing: type(of: error)))")
-                        }
-                    }
-                    if wroteConfig {
-                        do {
-                            try originalConfig.write(to: configURL, atomically: true, encoding: .utf8)
-                            chmod(configURL.path, S_IRUSR | S_IWUSR)
-                            logger.notice("switch account rollbackConfigRestored")
-                        } catch {
-                            logger.error("switch account rollbackConfigFailed errorType=\(String(describing: type(of: error)))")
-                        }
-                    }
-                    throw error
-                }
             }
-        } catch {
-            logger.error("switch account failed targetNumber=\(number) errorType=\(String(describing: type(of: error)))")
-            throw error
+
+            var wroteCredentials = false
+            var wroteConfig = false
+
+            do {
+                try writeAccountConfig(
+                    number: String(currentNumber),
+                    email: currentIdentity.email,
+                    config: originalConfig
+                )
+
+                let targetCredentials = try readAccountCredentials(number: String(number), email: target.email)
+                let targetConfig = try readAccountConfig(number: String(number), email: target.email)
+                guard !targetConfig.isEmpty else {
+                    logger.error("switch account failed reason=missingTargetConfig targetNumber=\(number)")
+                    throw AccountSwitcherError.missingBackupData(number)
+                }
+                guard !targetCredentials.isEmpty else {
+                    logger.error("switch account failed reason=missingTargetCredentials targetNumber=\(number)")
+                    throw AccountSwitcherError.missingCredentials(number, target.email)
+                }
+
+                try writeCurrentCredentials(targetCredentials)
+                wroteCredentials = true
+
+                let targetConfigJSON = try parseJSONObject(from: targetConfig, source: configURL)
+                guard let targetOAuth = targetConfigJSON["oauthAccount"] as? [String: Any] else {
+                    logger.error("switch account failed reason=invalidTargetOAuth targetNumber=\(number)")
+                    throw AccountSwitcherError.invalidBackupConfig(number)
+                }
+
+                var currentConfigJSON = try readJSONObject(configURL)
+                currentConfigJSON["oauthAccount"] = targetOAuth
+                try writeJSONObject(currentConfigJSON, to: configURL)
+                wroteConfig = true
+
+                data.activeAccountNumber = number
+                data.lastUpdated = Timestamp.now()
+                try writeSequence(data)
+                logger.notice("switch account done from=\(currentNumber) to=\(number)")
+            } catch {
+                logger.error("switch account aborted targetNumber=\(number) wroteCredentials=\(wroteCredentials) wroteConfig=\(wroteConfig) errorType=\(String(describing: type(of: error)))")
+                if wroteCredentials {
+                    do {
+                        try writeCurrentCredentials(rollbackCredentials)
+                        logger.notice("switch account credentials rolled back currentNumber=\(currentNumber)")
+                    } catch {
+                        logger.error("switch account rollbackCredentialsFailed currentNumber=\(currentNumber) errorType=\(String(describing: type(of: error)))")
+                    }
+                }
+                if wroteConfig {
+                    do {
+                        try originalConfig.write(to: configURL, atomically: true, encoding: .utf8)
+                        chmod(configURL.path, S_IRUSR | S_IWUSR)
+                        logger.notice("switch account config rolled back")
+                    } catch {
+                        logger.error("switch account rollbackConfigFailed errorType=\(String(describing: type(of: error)))")
+                    }
+                }
+                throw error
+            }
         }
     }
 
     func usageInfo(for account: ManagedAccount) async throws -> AccountQuotaInfo {
-        logger.notice("usage info start number=\(account.number)")
         let number = String(account.number)
         let credentials = try readAccountCredentials(number: number, email: account.record.email)
         guard !credentials.isEmpty else {
@@ -330,32 +291,21 @@ final class ClaudeAccountStore {
         }
 
         var parsed = try parseClaudeCredentials(credentials)
-        logger.notice("usage info credentialsParsed number=\(account.number) scopes=\(parsed.oauth.scopes.count) hasRefreshToken=\(parsed.oauth.refreshToken?.isEmpty == false) isExpiringSoon=\(parsed.oauth.isExpiringSoon)")
         guard parsed.oauth.scopes.contains(claudeAIProfileScope) else {
-            logger.notice("usage info unavailable missingProfileScope number=\(account.number)")
             return .unavailable(L10n.string(.quotaUnavailable))
         }
 
         if parsed.oauth.isExpiringSoon {
-            logger.notice("usage info refreshingExpiringToken number=\(account.number)")
             try await refreshAndStoreOAuthCredentials(&parsed, for: account)
-            logger.notice("usage info tokenRefreshed number=\(account.number)")
         }
-
-        logger.notice("usage info fetchingUsage number=\(account.number)")
 
         do {
             let object = try await fetchUsageObject(accessToken: parsed.oauth.accessToken)
-            let info = usageInfo(from: object, plan: parsed.oauth.plan)
-            logger.notice("usage info done number=\(account.number)")
-            return info
+            return usageInfo(from: object, plan: parsed.oauth.plan)
         } catch QuotaFetchError.unauthorized {
-            logger.notice("usage info unauthorized refreshing number=\(account.number)")
             try await refreshAndStoreOAuthCredentials(&parsed, for: account)
             let object = try await fetchUsageObject(accessToken: parsed.oauth.accessToken)
-            let info = usageInfo(from: object, plan: parsed.oauth.plan)
-            logger.notice("usage info done afterRefresh number=\(account.number)")
-            return info
+            return usageInfo(from: object, plan: parsed.oauth.plan)
         }
     }
 
@@ -368,9 +318,7 @@ final class ClaudeAccountStore {
             let data = try Data(contentsOf: quotaCacheFile)
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-            let snapshot = try decoder.decode(AccountQuotaCacheSnapshot.self, from: data)
-            logger.notice("quota cache read entries=\(snapshot.entries.count)")
-            return snapshot
+            return try decoder.decode(AccountQuotaCacheSnapshot.self, from: data)
         } catch {
             logger.error("quota cache read failed errorType=\(String(describing: type(of: error)))")
             return nil
@@ -386,7 +334,6 @@ final class ClaudeAccountStore {
             let data = try encoder.encode(snapshot)
             try data.write(to: quotaCacheFile, options: .atomic)
             chmod(quotaCacheFile.path, S_IRUSR | S_IWUSR)
-            logger.notice("quota cache wrote entries=\(snapshot.entries.count)")
         } catch {
             logger.error("quota cache write failed errorType=\(String(describing: type(of: error)))")
         }
@@ -442,13 +389,11 @@ final class ClaudeAccountStore {
     }
 
     private func readCurrentCredentials() throws -> String? {
-        logger.notice("read current Claude Code credentials service=\(self.claudeCredentialsService)")
-        return try keychain.readGenericPasswordItem(service: claudeCredentialsService)?.password
+        try keychain.readGenericPasswordItem(service: claudeCredentialsService)?.password
     }
 
     private func writeCurrentCredentials(_ credentials: String) throws {
         let fallbackAccount = NSUserName().isEmpty ? "user" : NSUserName()
-        logger.notice("write current Claude Code credentials service=\(self.claudeCredentialsService) hasFallbackAccount=\((!fallbackAccount.isEmpty))")
         try keychain.upsertGenericPasswordForService(
             service: claudeCredentialsService,
             fallbackAccount: fallbackAccount,
@@ -461,15 +406,13 @@ final class ClaudeAccountStore {
     }
 
     private func readAccountCredentials(number: String, email: String) throws -> String {
-        logger.notice("read backup credentials number=\(number) service=\(self.backupCredentialsService)")
-        return try keychain.readGenericPassword(
+        try keychain.readGenericPassword(
             service: backupCredentialsService,
             account: backupCredentialAccount(number: number, email: email)
         ) ?? ""
     }
 
     private func writeAccountCredentials(number: String, email: String, credentials: String) throws {
-        logger.notice("write backup credentials number=\(number) service=\(self.backupCredentialsService)")
         try keychain.upsertGenericPassword(
             service: backupCredentialsService,
             account: backupCredentialAccount(number: number, email: email),
@@ -484,23 +427,19 @@ final class ClaudeAccountStore {
     private func readAccountConfig(number: String, email: String) throws -> String {
         let url = accountConfigURL(number: number, email: email)
         guard fileManager.fileExists(atPath: url.path) else {
-            logger.notice("read backup config missing number=\(number)")
             return ""
         }
-        logger.notice("read backup config number=\(number)")
         return try String(contentsOf: url, encoding: .utf8)
     }
 
     private func writeAccountConfig(number: String, email: String, config: String) throws {
         let url = accountConfigURL(number: number, email: email)
-        logger.notice("write backup config number=\(number) bytes=\(config.utf8.count)")
         try config.write(to: url, atomically: true, encoding: .utf8)
         chmod(url.path, S_IRUSR | S_IWUSR)
     }
 
     private func readSequenceIfPresent() throws -> SequenceData? {
         guard fileManager.fileExists(atPath: sequenceFile.path) else {
-            logger.notice("read sequence missing")
             return nil
         }
         return try readSequence()
@@ -513,9 +452,7 @@ final class ClaudeAccountStore {
 
         do {
             let data = try Data(contentsOf: sequenceFile)
-            let sequence = try JSONDecoder().decode(SequenceData.self, from: data)
-            logger.notice("read sequence accountCount=\(sequence.accounts.count)")
-            return sequence
+            return try JSONDecoder().decode(SequenceData.self, from: data)
         } catch {
             logger.error("read sequence failed errorType=\(String(describing: type(of: error)))")
             throw AccountSwitcherError.fileSystem(L10n.string(.errorReadSequence, error.localizedDescription))
@@ -527,7 +464,6 @@ final class ClaudeAccountStore {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let json = try encoder.encode(data)
         try setupParentDirectory(for: sequenceFile)
-        logger.notice("write sequence accountCount=\(data.accounts.count) activeNumber=\((data.activeAccountNumber.map(String.init) ?? "<none>"))")
         try json.write(to: sequenceFile, options: .atomic)
         chmod(sequenceFile.path, S_IRUSR | S_IWUSR)
     }
@@ -597,6 +533,7 @@ final class ClaudeAccountStore {
             return
         }
 
+        logger.notice("migrate organization fields start accountCount=\(data.accounts.count)")
         let liveIdentity = try? currentIdentity()
         var updated = false
 
@@ -629,6 +566,7 @@ final class ClaudeAccountStore {
         if updated {
             data.lastUpdated = Timestamp.now()
             try writeSequence(data)
+            logger.notice("migrate organization fields done")
         }
     }
 
@@ -642,8 +580,7 @@ final class ClaudeAccountStore {
         do {
             rootObject = try JSONSerialization.jsonObject(with: data)
         } catch {
-            let preview = String(credentials.prefix(256))
-            logger.error("parse credentials failed reason=jsonParseFailed:\(error.localizedDescription) length=\(credentials.count) preview=\(preview)")
+            logger.error("parse credentials failed reason=jsonParseFailed length=\(credentials.count) error=\(error.localizedDescription)")
             throw error
         }
 
@@ -694,6 +631,7 @@ final class ClaudeAccountStore {
         if account.isActive {
             try writeCurrentCredentials(updatedCredentials)
         }
+        logger.notice("oauth refresh done number=\(account.number) isActive=\(account.isActive)")
     }
 
     private func refreshOAuthCredentials(_ parsed: inout ParsedClaudeCredentials) async throws {

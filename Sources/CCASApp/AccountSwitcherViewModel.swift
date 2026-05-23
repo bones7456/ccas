@@ -86,7 +86,6 @@ final class AccountSwitcherViewModel: ObservableObject {
     }
 
     func refresh() {
-        logger.notice("refresh requested")
         run {
             self.currentIdentity = try self.store.currentIdentity()
             self.accounts = try self.store.listAccounts()
@@ -97,14 +96,12 @@ final class AccountSwitcherViewModel: ObservableObject {
             } else if self.statusMessage == .noAccounts {
                 self.statusMessage = .none
             }
-            self.logger.notice("refresh completed accountCount=\(self.accounts.count) hasCurrentIdentity=\((self.currentIdentity != nil))")
         } onSuccess: {
             self.loadQuotaInformation()
         }
     }
 
     func addCurrentAccount() {
-        logger.notice("add account requested")
         run {
             let result = try self.store.addCurrentAccount()
             self.currentIdentity = try self.store.currentIdentity()
@@ -116,17 +113,14 @@ final class AccountSwitcherViewModel: ObservableObject {
             case .updated(let account):
                 self.statusMessage = .updatedExisting(account.number)
             }
-            self.logger.notice("add account completed accountCount=\(self.accounts.count) hasCurrentIdentity=\((self.currentIdentity != nil))")
         } onSuccess: {
             self.loadQuotaInformation()
         }
     }
 
     func switchTo(_ account: ManagedAccount) {
-        logger.notice("switch requested number=\(account.number) isActive=\(account.isActive)")
         guard !account.isActive else {
             statusMessage = .alreadyCurrent
-            logger.notice("switch skipped alreadyActive number=\(account.number)")
             return
         }
 
@@ -135,7 +129,6 @@ final class AccountSwitcherViewModel: ObservableObject {
             self.currentIdentity = try self.store.currentIdentity()
             self.accounts = try self.store.listAccounts()
             self.statusMessage = .switched(account.number)
-            self.logger.notice("switch completed number=\(account.number) hasCurrentIdentity=\((self.currentIdentity != nil))")
         } onSuccess: {
             self.loadQuotaInformation()
         }
@@ -183,7 +176,6 @@ final class AccountSwitcherViewModel: ObservableObject {
 
         prepareQuotaStatesForRefresh(accounts: accounts)
         isFetchingQuota = true
-        logger.notice("usage refresh start accountCount=\(accounts.count)")
 
         quotaTask = Task {
             var didUpdate = false
@@ -195,8 +187,6 @@ final class AccountSwitcherViewModel: ObservableObject {
 
                 if let blockedUntil = self.quotaRateLimitedUntil[account.number],
                    blockedUntil > Date() {
-                    let remaining = Int(blockedUntil.timeIntervalSinceNow.rounded())
-                    self.logger.notice("usage refresh account skipped reason=rateLimited number=\(account.number) retryInSeconds=\(remaining)")
                     continue
                 }
 
@@ -204,7 +194,6 @@ final class AccountSwitcherViewModel: ObservableObject {
                    self.hasLoadedQuotaState(for: account.number) {
                     let age = Date().timeIntervalSince(lastSuccess)
                     if age < Self.quotaRefreshCooldown {
-                        self.logger.notice("usage refresh account skipped reason=recentlySucceeded number=\(account.number) ageSeconds=\(Int(age))")
                         continue
                     }
                 }
@@ -218,7 +207,6 @@ final class AccountSwitcherViewModel: ObservableObject {
                     self.lastQuotaSuccessAt[account.number] = Date()
                     self.quotaRateLimitedUntil[account.number] = nil
                     didUpdate = true
-                    self.logger.notice("usage refresh account done number=\(account.number)")
                 } catch {
                     guard !Task.isCancelled else {
                         return
@@ -241,7 +229,6 @@ final class AccountSwitcherViewModel: ObservableObject {
                 self.recordQuotaCacheUpdate(for: accounts)
             }
             self.isFetchingQuota = false
-            self.logger.notice("usage refresh done")
         }
     }
 
@@ -261,7 +248,6 @@ final class AccountSwitcherViewModel: ObservableObject {
 
         quotaStates = cachedStates
         lastQuotaUpdatedAt = cachedStates.isEmpty ? nil : snapshot.updatedAt
-        logger.notice("usage cache loaded stateCount=\(cachedStates.count)")
     }
 
     private func prepareQuotaStatesForRefresh(accounts: [ManagedAccount]) {
@@ -330,7 +316,6 @@ final class AccountSwitcherViewModel: ObservableObject {
     }
 
     private func run(_ action: @escaping () throws -> Void, onSuccess: (() -> Void)? = nil) {
-        logger.notice("operation start")
         isBusy = true
         Task {
             do {
@@ -340,7 +325,6 @@ final class AccountSwitcherViewModel: ObservableObject {
                 self.logger.error("operation failed errorType=\(String(describing: type(of: error)))")
                 statusMessage = .error(error.localizedDescription)
             }
-            self.logger.notice("operation end")
             isBusy = false
         }
     }
