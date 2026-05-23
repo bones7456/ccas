@@ -38,3 +38,6 @@ dist/
 *.tmp
 *.swp
 *.swo
+
+# Reference repos (not part of this project)
+/reference/
