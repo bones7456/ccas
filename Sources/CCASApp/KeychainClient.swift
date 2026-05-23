@@ -107,7 +107,8 @@ final class KeychainClient {
         }
     }
 
-    private func removeAllMatching(service: String, account: String) throws -> Int {
+    @discardableResult
+    func removeAllMatching(service: String, account: String) throws -> Int {
         var removed = 0
         while true {
             let result = try runSecurity([

@@ -5,6 +5,7 @@ enum L10n {
         case accountDisplay
         case addAccount
         case alreadyCurrent
+        case cancel
         case claudeCode
         case currentAccount
         case errorAccountNotFound
@@ -29,6 +30,10 @@ enum L10n {
         case noAccountsTitle
         case notAdded
         case personal
+        case purgeAll
+        case purgeConfirm
+        case purgeConfirmBody
+        case purgeConfirmTitle
         case quotaFailed
         case quotaFiveHour
         case quotaLoading
@@ -41,8 +46,15 @@ enum L10n {
         case quotaUnlimited
         case quit
         case refresh
+        case removeAccount
+        case removeAccountActiveWarning
+        case removeAccountConfirm
+        case removeAccountConfirmBody
+        case removeAccountConfirmTitle
         case signedOut
         case statusAddedAccount
+        case statusPurged
+        case statusRemovedAccount
         case statusSwitchedAccount
         case statusUpdatedExistingAccount
         case switchToAccount
@@ -85,6 +97,7 @@ enum L10n {
         .accountDisplay: "Account %d · %@",
         .addAccount: "Add Account",
         .alreadyCurrent: "This account is already active",
+        .cancel: "Cancel",
         .claudeCode: "Claude Code",
         .currentAccount: "Current account",
         .errorAccountNotFound: "Account %d was not found.",
@@ -109,6 +122,10 @@ enum L10n {
         .noAccountsTitle: "No Accounts",
         .notAdded: "Not added",
         .personal: "personal",
+        .purgeAll: "Reset all data…",
+        .purgeConfirm: "Reset",
+        .purgeConfirmBody: "This permanently deletes ~/.ccas and every backup credential CCAS stored in Keychain. Your current Claude Code login is left untouched, but you will lose the ability to switch back to other accounts unless you re-add them.",
+        .purgeConfirmTitle: "Reset all CCAS data?",
         .quotaFailed: "Usage unavailable: %@",
         .quotaFiveHour: "5h",
         .quotaLoading: "Loading usage...",
@@ -121,8 +138,15 @@ enum L10n {
         .quotaUnlimited: "Unlimited",
         .quit: "Quit",
         .refresh: "Refresh",
+        .removeAccount: "Remove",
+        .removeAccountActiveWarning: "This is the account currently signed in to Claude Code. Your live login stays, but the backup will be gone and you cannot switch back to it unless you add it again.",
+        .removeAccountConfirm: "Remove",
+        .removeAccountConfirmBody: "Account %d (%@) will be deleted from CCAS, along with its Keychain backup and config snapshot.",
+        .removeAccountConfirmTitle: "Remove this account?",
         .signedOut: "Signed out",
         .statusAddedAccount: "Added account %d",
+        .statusPurged: "All CCAS data has been removed.",
+        .statusRemovedAccount: "Removed account %d",
         .statusSwitchedAccount: "Switched to account %d. Restart Claude Code to use it.",
         .statusUpdatedExistingAccount: "Still detected account %d. Backup updated; no new account was added.",
         .switchToAccount: "Switch to this account"
@@ -132,6 +156,7 @@ enum L10n {
         .accountDisplay: "账号 %d · %@",
         .addAccount: "添加账号",
         .alreadyCurrent: "已经是当前账号",
+        .cancel: "取消",
         .claudeCode: "Claude Code",
         .currentAccount: "当前账号",
         .errorAccountNotFound: "没有找到账号 %d。",
@@ -156,6 +181,10 @@ enum L10n {
         .noAccountsTitle: "暂无账号",
         .notAdded: "未添加",
         .personal: "个人",
+        .purgeAll: "清除所有数据…",
+        .purgeConfirm: "清除",
+        .purgeConfirmBody: "将永久删除 ~/.ccas 目录，以及 CCAS 在 Keychain 中保存的所有备份凭据。Claude Code 当前登录状态不受影响，但除非重新添加，否则将无法切换回其他账号。",
+        .purgeConfirmTitle: "清除所有 CCAS 数据？",
         .quotaFailed: "额度不可用：%@",
         .quotaFiveHour: "5小时",
         .quotaLoading: "正在获取额度...",
@@ -168,8 +197,15 @@ enum L10n {
         .quotaUnlimited: "无限额",
         .quit: "退出",
         .refresh: "刷新",
+        .removeAccount: "删除",
+        .removeAccountActiveWarning: "这是当前 Claude Code 登录的账号。删除后当前登录态保留，但备份会被清除，除非重新添加，否则无法切换回这个账号。",
+        .removeAccountConfirm: "删除",
+        .removeAccountConfirmBody: "账号 %d（%@）以及它在 Keychain 的备份和配置快照都会被删除。",
+        .removeAccountConfirmTitle: "确认删除该账号？",
         .signedOut: "未登录",
         .statusAddedAccount: "已添加账号 %d",
+        .statusPurged: "已清除所有 CCAS 数据",
+        .statusRemovedAccount: "已删除账号 %d",
         .statusSwitchedAccount: "已切换到账号 %d，请重启 Claude Code",
         .statusUpdatedExistingAccount: "检测到的仍是账号 %d，已更新备份；没有新增账号",
         .switchToAccount: "切换到该账号"

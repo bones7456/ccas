@@ -1,86 +1,123 @@
 import AppKit
 import SwiftUI
 
+enum PendingConfirmation: Equatable {
+    case remove(ManagedAccount)
+    case purge
+}
+
 struct MenuContentView: View {
     @ObservedObject var viewModel: AccountSwitcherViewModel
     @State private var languageRevision = 0
     @State private var quotaClock = Date()
+    @State private var confirmation: PendingConfirmation?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            header
+        ZStack {
+            VStack(alignment: .leading, spacing: 12) {
+                header
 
-            HStack(spacing: 8) {
-                Button {
-                    viewModel.addCurrentAccount()
-                } label: {
-                    Label(L10n.string(.addAccount), systemImage: "plus.circle.fill")
-                }
-                .keyboardShortcut("n")
-                .disabled(viewModel.isBusy)
-
-                Spacer()
-
-                if let quotaAgeText = viewModel.quotaAgeText(now: quotaClock) {
-                    Text(quotaAgeText)
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                        .fixedSize()
-                }
-
-                Button {
-                    viewModel.refresh()
-                } label: {
-                    if viewModel.isFetchingQuota {
-                        ProgressView()
-                            .controlSize(.small)
-                            .scaleEffect(0.7)
-                            .frame(width: 18, height: 18)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                            .frame(width: 18, height: 18)
+                HStack(spacing: 8) {
+                    Button {
+                        viewModel.addCurrentAccount()
+                    } label: {
+                        Label(L10n.string(.addAccount), systemImage: "plus.circle.fill")
                     }
+                    .keyboardShortcut("n")
+                    .disabled(viewModel.isBusy)
+
+                    Spacer()
+
+                    if let quotaAgeText = viewModel.quotaAgeText(now: quotaClock) {
+                        Text(quotaAgeText)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+
+                    Button {
+                        viewModel.refresh()
+                    } label: {
+                        if viewModel.isFetchingQuota {
+                            ProgressView()
+                                .controlSize(.small)
+                                .scaleEffect(0.7)
+                                .frame(width: 18, height: 18)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                                .frame(width: 18, height: 18)
+                        }
+                    }
+                    .frame(width: 22, height: 22)
+                    .buttonStyle(.borderless)
+                    .help(viewModel.isFetchingQuota ? L10n.string(.quotaLoading) : L10n.string(.refresh))
+                    .disabled(viewModel.isBusy || viewModel.isFetchingQuota)
                 }
-                .frame(width: 22, height: 22)
-                .buttonStyle(.borderless)
-                .help(viewModel.isFetchingQuota ? L10n.string(.quotaLoading) : L10n.string(.refresh))
-                .disabled(viewModel.isBusy || viewModel.isFetchingQuota)
-            }
-            .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
-                quotaClock = date
-            }
-
-            Divider()
-
-            accountList
-
-            if !viewModel.statusText.isEmpty {
-                Text(viewModel.statusText)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(4)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Divider()
-
-            HStack {
-                Text("~/.ccas")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-
-                Spacer()
-
-                Button(L10n.string(.quit)) {
-                    NSApplication.shared.terminate(nil)
+                .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
+                    quotaClock = date
                 }
-                .buttonStyle(.borderless)
+
+                Divider()
+
+                accountList
+
+                if !viewModel.statusText.isEmpty {
+                    Text(viewModel.statusText)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Divider()
+
+                HStack {
+                    Text("~/.ccas")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                confirmation = .purge
+                            } label: {
+                                Label(L10n.string(.purgeAll), systemImage: "trash")
+                            }
+                            .disabled(viewModel.isBusy)
+                        }
+
+                    Spacer()
+
+                    Button(L10n.string(.quit)) {
+                        NSApplication.shared.terminate(nil)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+            .padding(14)
+            .frame(width: 380)
+            .disabled(confirmation != nil)
+            .blur(radius: confirmation != nil ? 1.5 : 0)
+
+            if let confirmation {
+                ConfirmationOverlay(
+                    confirmation: confirmation,
+                    isBusy: viewModel.isBusy,
+                    onCancel: { self.confirmation = nil },
+                    onConfirm: {
+                        switch confirmation {
+                        case .remove(let account):
+                            viewModel.removeAccount(account)
+                        case .purge:
+                            viewModel.purgeAllData()
+                        }
+                        self.confirmation = nil
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.97)))
             }
         }
         .id(languageRevision)
-        .padding(14)
-        .frame(width: 380)
+        .animation(.easeInOut(duration: 0.12), value: confirmation)
         .onAppear {
             quotaClock = Date()
             viewModel.refresh()
@@ -140,9 +177,13 @@ struct MenuContentView: View {
             ScrollView {
                 LazyVStack(spacing: 6) {
                     ForEach(viewModel.accounts) { account in
-                        AccountRow(account: account, quotaState: viewModel.quotaState(for: account), isBusy: viewModel.isBusy) {
-                            viewModel.switchTo(account)
-                        }
+                        AccountRow(
+                            account: account,
+                            quotaState: viewModel.quotaState(for: account),
+                            isBusy: viewModel.isBusy,
+                            action: { viewModel.switchTo(account) },
+                            onRemove: { confirmation = .remove(account) }
+                        )
                     }
                 }
             }
@@ -156,6 +197,7 @@ private struct AccountRow: View {
     let quotaState: AccountQuotaLoadState?
     let isBusy: Bool
     let action: () -> Void
+    let onRemove: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -211,6 +253,13 @@ private struct AccountRow: View {
         .background {
             RoundedRectangle(cornerRadius: 8)
                 .fill(account.isActive ? Color.accentColor.opacity(0.12) : Color.clear)
+        }
+        .contextMenu {
+            Button(role: .destructive) {
+                onRemove()
+            } label: {
+                Label(L10n.string(.removeAccount), systemImage: "trash")
+            }
         }
     }
 
@@ -401,4 +450,87 @@ private struct MonetaryQuotaLine: View {
         formatter.timeStyle = .short
         return formatter
     }()
+}
+
+private struct ConfirmationOverlay: View {
+    let confirmation: PendingConfirmation
+    let isBusy: Bool
+    let onCancel: () -> Void
+    let onConfirm: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture { onCancel() }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(title)
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(message)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    Spacer()
+                    Button(L10n.string(.cancel)) {
+                        onCancel()
+                    }
+                    .keyboardShortcut(.cancelAction)
+
+                    Button(role: .destructive) {
+                        onConfirm()
+                    } label: {
+                        Text(confirmLabel)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                    .disabled(isBusy)
+                }
+                .padding(.top, 4)
+            }
+            .padding(16)
+            .background {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(nsColor: .windowBackgroundColor))
+                    .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
+            }
+            .padding(.horizontal, 18)
+        }
+    }
+
+    private var title: String {
+        switch confirmation {
+        case .remove:
+            return L10n.string(.removeAccountConfirmTitle)
+        case .purge:
+            return L10n.string(.purgeConfirmTitle)
+        }
+    }
+
+    private var message: String {
+        switch confirmation {
+        case .remove(let account):
+            var text = L10n.string(.removeAccountConfirmBody, account.number, account.record.email)
+            if account.isActive {
+                text += "\n\n" + L10n.string(.removeAccountActiveWarning)
+            }
+            return text
+        case .purge:
+            return L10n.string(.purgeConfirmBody)
+        }
+    }
+
+    private var confirmLabel: String {
+        switch confirmation {
+        case .remove:
+            return L10n.string(.removeAccountConfirm)
+        case .purge:
+            return L10n.string(.purgeConfirm)
+        }
+    }
 }

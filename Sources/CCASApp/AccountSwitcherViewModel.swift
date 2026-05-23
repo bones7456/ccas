@@ -8,6 +8,8 @@ enum StatusMessage: Equatable {
     case added(Int)
     case updatedExisting(Int)
     case switched(Int)
+    case removed(Int)
+    case purged
     case error(String)
 
     var text: String {
@@ -24,6 +26,10 @@ enum StatusMessage: Equatable {
             return L10n.string(.statusUpdatedExistingAccount, number)
         case .switched(let number):
             return L10n.string(.statusSwitchedAccount, number)
+        case .removed(let number):
+            return L10n.string(.statusRemovedAccount, number)
+        case .purged:
+            return L10n.string(.statusPurged)
         case .error(let text):
             return text
         }
@@ -115,6 +121,39 @@ final class AccountSwitcherViewModel: ObservableObject {
             }
         } onSuccess: {
             self.loadQuotaInformation()
+        }
+    }
+
+    func removeAccount(_ account: ManagedAccount) {
+        let number = account.number
+        run {
+            try self.store.removeAccount(number: number)
+            self.currentIdentity = try self.store.currentIdentity()
+            self.accounts = try self.store.listAccounts()
+            self.quotaStates.removeValue(forKey: number)
+            self.lastQuotaSuccessAt.removeValue(forKey: number)
+            self.quotaRateLimitedUntil.removeValue(forKey: number)
+            self.statusMessage = .removed(number)
+            if self.accounts.isEmpty {
+                self.lastQuotaUpdatedAt = nil
+            } else {
+                self.recordQuotaCacheUpdate(for: self.accounts)
+            }
+        }
+    }
+
+    func purgeAllData() {
+        quotaTask?.cancel()
+        run {
+            try self.store.purgeAllData()
+            self.currentIdentity = try self.store.currentIdentity()
+            self.accounts = []
+            self.quotaStates = [:]
+            self.lastQuotaSuccessAt = [:]
+            self.quotaRateLimitedUntil = [:]
+            self.lastQuotaUpdatedAt = nil
+            self.isFetchingQuota = false
+            self.statusMessage = .purged
         }
     }
 

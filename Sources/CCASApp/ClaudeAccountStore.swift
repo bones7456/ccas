@@ -201,24 +201,22 @@ final class ClaudeAccountStore {
 
             let originalConfig = try String(contentsOf: configURL, encoding: .utf8)
 
-            var rollbackCredentials = try readAccountCredentials(
-                number: String(currentNumber),
-                email: currentIdentity.email
-            )
-            if rollbackCredentials.isEmpty {
-                rollbackCredentials = try readCurrentCredentials() ?? ""
-
-                guard !rollbackCredentials.isEmpty else {
-                    logger.error("switch account failed reason=missingRollbackCredentials currentNumber=\(currentNumber)")
-                    throw AccountSwitcherError.missingCredentials(currentNumber, currentIdentity.email)
-                }
-
-                try writeAccountCredentials(
-                    number: String(currentNumber),
-                    email: currentIdentity.email,
-                    credentials: rollbackCredentials
-                )
+            // Snapshot the live credentials into the current account's backup before
+            // switching. Claude Code rotates refresh tokens in the background; if we
+            // only kept the stale backup, switching back later would restore an
+            // invalidated refresh token and force the user to /login again.
+            let liveCredentials = try readCurrentCredentials() ?? ""
+            guard !liveCredentials.isEmpty else {
+                logger.error("switch account failed reason=missingRollbackCredentials currentNumber=\(currentNumber)")
+                throw AccountSwitcherError.missingCredentials(currentNumber, currentIdentity.email)
             }
+
+            try writeAccountCredentials(
+                number: String(currentNumber),
+                email: currentIdentity.email,
+                credentials: liveCredentials
+            )
+            let rollbackCredentials = liveCredentials
 
             var wroteCredentials = false
             var wroteConfig = false
@@ -281,6 +279,82 @@ final class ClaudeAccountStore {
                 throw error
             }
         }
+    }
+
+    func removeAccount(number: Int) throws {
+        guard try readSequenceIfPresent() != nil else {
+            logger.error("remove account failed reason=noManagedAccounts targetNumber=\(number)")
+            throw AccountSwitcherError.noManagedAccounts
+        }
+
+        try FileLock(path: lockFile).withExclusiveLock {
+            var data = try readSequence()
+            let key = String(number)
+
+            guard let record = data.accounts[key] else {
+                logger.error("remove account failed reason=accountNotFound targetNumber=\(number)")
+                throw AccountSwitcherError.accountNotFound(number)
+            }
+
+            try keychain.removeAllMatching(
+                service: backupCredentialsService,
+                account: backupCredentialAccount(number: key, email: record.email)
+            )
+
+            let configURL = accountConfigURL(number: key, email: record.email)
+            if fileManager.fileExists(atPath: configURL.path) {
+                try fileManager.removeItem(at: configURL)
+            }
+
+            data.accounts.removeValue(forKey: key)
+            data.sequence.removeAll { $0 == number }
+            if data.activeAccountNumber == number {
+                data.activeAccountNumber = nil
+            }
+            data.lastUpdated = Timestamp.now()
+            try writeSequence(data)
+
+            logger.notice("account removed number=\(number)")
+        }
+    }
+
+    func purgeAllData() throws {
+        // Snapshot account list before we delete sequence.json, so we know which
+        // Keychain backup entries to clean up. Best-effort: even if sequence.json
+        // is corrupt, the directory wipe below still gets run.
+        let backupEntries: [(number: String, email: String)]
+        if let data = try? readSequenceIfPresent() {
+            backupEntries = data.accounts.map { ($0.key, $0.value.email) }
+        } else {
+            backupEntries = []
+        }
+
+        var firstKeychainError: Error?
+        for entry in backupEntries {
+            do {
+                try keychain.removeAllMatching(
+                    service: backupCredentialsService,
+                    account: backupCredentialAccount(number: entry.number, email: entry.email)
+                )
+            } catch {
+                if firstKeychainError == nil {
+                    firstKeychainError = error
+                }
+                logger.error("purge keychain entry failed number=\(entry.number) errorType=\(String(describing: type(of: error)))")
+            }
+        }
+
+        if fileManager.fileExists(atPath: backupDirectory.path) {
+            try fileManager.removeItem(at: backupDirectory)
+        }
+
+        // Surface the first Keychain failure so the user knows a stale entry
+        // may remain (rare; usually a locked Keychain or revoked ACL).
+        if let firstKeychainError {
+            throw firstKeychainError
+        }
+
+        logger.notice("purge done removedEntries=\(backupEntries.count)")
     }
 
     func usageInfo(for account: ManagedAccount) async throws -> AccountQuotaInfo {
