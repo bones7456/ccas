@@ -46,6 +46,7 @@ enum L10n {
         case quotaWeek
         case quotaUnlimited
         case quit
+        case redactSensitive
         case refresh
         case removeAccount
         case removeAccountActiveWarning
@@ -140,6 +141,7 @@ enum L10n {
         .quotaWeek: "Week",
         .quotaUnlimited: "Unlimited",
         .quit: "Quit",
+        .redactSensitive: "Hide Sensitive Info",
         .refresh: "Refresh",
         .removeAccount: "Remove",
         .removeAccountActiveWarning: "This is the account currently signed in to Claude Code. Your live login stays, but the backup will be gone and you cannot switch back to it unless you add it again.",
@@ -201,6 +203,7 @@ enum L10n {
         .quotaWeek: "本周",
         .quotaUnlimited: "无限额",
         .quit: "退出",
+        .redactSensitive: "隐藏敏感信息",
         .refresh: "刷新",
         .removeAccount: "删除",
         .removeAccountActiveWarning: "这是当前 Claude Code 登录的账号。删除后当前登录态保留，但备份会被清除，除非重新添加，否则无法切换回这个账号。",

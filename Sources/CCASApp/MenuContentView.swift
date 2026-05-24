@@ -9,6 +9,7 @@ enum PendingConfirmation: Equatable {
 struct MenuContentView: View {
     @ObservedObject var viewModel: AccountSwitcherViewModel
     @ObservedObject var updateController: UpdateController
+    @AppStorage("redactSensitive") private var redactSensitive: Bool = false
     @State private var languageRevision = 0
     @State private var quotaClock = Date()
     @State private var confirmation: PendingConfirmation?
@@ -84,13 +85,6 @@ struct MenuContentView: View {
                                 Label(L10n.string(.revealInFinder), systemImage: "folder")
                             }
 
-                            Button {
-                                updateController.checkForUpdates()
-                            } label: {
-                                Label(L10n.string(.checkForUpdates), systemImage: "arrow.down.circle")
-                            }
-                            .disabled(!updateController.canCheckForUpdates)
-
                             Button(role: .destructive) {
                                 confirmation = .purge
                             } label: {
@@ -162,12 +156,12 @@ struct MenuContentView: View {
             .frame(width: 38, height: 38)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(viewModel.currentTitle)
+                Text(viewModel.currentTitle.redactedEmails(enabled: redactSensitive))
                     .font(.headline)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
-                Text(viewModel.currentSubtitle)
+                Text(viewModel.currentSubtitle.redactedEmails(enabled: redactSensitive))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -179,6 +173,28 @@ struct MenuContentView: View {
                 ProgressView()
                     .controlSize(.small)
             }
+
+            Menu {
+                Toggle(isOn: $redactSensitive) {
+                    Label(L10n.string(.redactSensitive), systemImage: "eye.slash")
+                }
+
+                Divider()
+
+                Button {
+                    updateController.checkForUpdates()
+                } label: {
+                    Label(L10n.string(.checkForUpdates), systemImage: "arrow.down.circle")
+                }
+                .disabled(!updateController.canCheckForUpdates)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
         }
     }
 
@@ -202,6 +218,7 @@ struct MenuContentView: View {
                             account: account,
                             quotaState: viewModel.quotaState(for: account),
                             isBusy: viewModel.isBusy,
+                            redactSensitive: redactSensitive,
                             action: { viewModel.switchTo(account) },
                             onRemove: { confirmation = .remove(account) }
                         )
@@ -217,6 +234,7 @@ private struct AccountRow: View {
     let account: ManagedAccount
     let quotaState: AccountQuotaLoadState?
     let isBusy: Bool
+    let redactSensitive: Bool
     let action: () -> Void
     let onRemove: () -> Void
 
@@ -230,7 +248,7 @@ private struct AccountRow: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 0) {
-                            Text(account.record.email)
+                            Text(account.record.email.redactedEmails(enabled: redactSensitive))
                                 .lineLimit(1)
                                 .truncationMode(.middle)
 
@@ -242,7 +260,7 @@ private struct AccountRow: View {
                         }
                         .font(.subheadline.weight(.medium))
 
-                        Text(L10n.string(.accountDisplay, account.number, account.displayTag))
+                        Text(L10n.string(.accountDisplay, account.number, account.displayTag).redactedEmails(enabled: redactSensitive))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -553,5 +571,36 @@ private struct ConfirmationOverlay: View {
         case .purge:
             return L10n.string(.purgeConfirm)
         }
+    }
+}
+
+private extension String {
+    private static let emailRegex: NSRegularExpression? = {
+        try? NSRegularExpression(pattern: #"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}"#)
+    }()
+
+    func redactedEmails(enabled: Bool) -> String {
+        guard enabled, let regex = Self.emailRegex else { return self }
+        let ns = self as NSString
+        var result = ""
+        var cursor = 0
+        regex.enumerateMatches(in: self, range: NSRange(location: 0, length: ns.length)) { match, _, _ in
+            guard let range = match?.range else { return }
+            result += ns.substring(with: NSRange(location: cursor, length: range.location - cursor))
+            result += Self.maskEmail(ns.substring(with: range))
+            cursor = range.location + range.length
+        }
+        result += ns.substring(from: cursor)
+        return result
+    }
+
+    private static func maskEmail(_ email: String) -> String {
+        guard let at = email.firstIndex(of: "@") else { return email }
+        let local = email[email.startIndex..<at]
+        let domain = email[at...]
+        if local.count > 2 {
+            return String(local.prefix(2)) + "***" + domain
+        }
+        return "***" + domain
     }
 }
