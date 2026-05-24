@@ -31,7 +31,10 @@ let package = Package(
                 .process("Resources")
             ],
             linkerSettings: [
-                .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", infoPlistPath])
+                .unsafeFlags([
+                    "-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", infoPlistPath,
+                    "-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"
+                ])
             ]
         )
     ]
