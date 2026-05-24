@@ -156,18 +156,18 @@ fi
 PUB_DATE="$(LC_TIME=en_US date -u "+%a, %d %b %Y %H:%M:%S +0000")"
 
 cat > "$APPCAST_ITEM" <<EOF
-        <item>
-            <title>Version ${MARKETING_VERSION}</title>
-            <pubDate>${PUB_DATE}</pubDate>
-            <sparkle:version>${BUILD_VERSION}</sparkle:version>
-            <sparkle:shortVersionString>${MARKETING_VERSION}</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>${MIN_SYSTEM_VERSION}</sparkle:minimumSystemVersion>
-            <sparkle:fullReleaseNotesLink>${FULL_NOTES_URL}</sparkle:fullReleaseNotesLink>
-            <description><![CDATA[
+<item xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+    <title>Version ${MARKETING_VERSION}</title>
+    <pubDate>${PUB_DATE}</pubDate>
+    <sparkle:version>${BUILD_VERSION}</sparkle:version>
+    <sparkle:shortVersionString>${MARKETING_VERSION}</sparkle:shortVersionString>
+    <sparkle:minimumSystemVersion>${MIN_SYSTEM_VERSION}</sparkle:minimumSystemVersion>
+    <sparkle:fullReleaseNotesLink>${FULL_NOTES_URL}</sparkle:fullReleaseNotesLink>
+    <description><![CDATA[
 ${NOTES_HTML}
-            ]]></description>
-            <enclosure url="${ZIP_URL}" ${ED_SIG_ATTRS} type="application/octet-stream" />
-        </item>
+    ]]></description>
+    <enclosure url="${ZIP_URL}" ${ED_SIG_ATTRS} type="application/octet-stream" />
+</item>
 EOF
 
 echo "==> Artifacts:"
