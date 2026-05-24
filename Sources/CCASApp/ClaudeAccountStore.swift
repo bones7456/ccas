@@ -642,8 +642,12 @@ final class ClaudeAccountStore {
     }
 
     private func nextAccountNumber(in data: SequenceData) -> Int {
-        let existing = data.accounts.keys.compactMap(Int.init)
-        return (existing.max() ?? 0) + 1
+        let used = Set(data.accounts.keys.compactMap(Int.init))
+        var candidate = 1
+        while used.contains(candidate) {
+            candidate += 1
+        }
+        return candidate
     }
 
     private func managedNumber(for identity: AccountIdentity, in data: SequenceData) -> Int? {

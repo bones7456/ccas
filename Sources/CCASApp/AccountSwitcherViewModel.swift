@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftUI
 
@@ -36,6 +37,18 @@ enum StatusMessage: Equatable {
     }
 }
 
+enum QuotaSeverity {
+    case normal, warning, critical
+
+    init(percent: Double) {
+        switch percent {
+        case ..<70: self = .normal
+        case ..<85: self = .warning
+        default: self = .critical
+        }
+    }
+}
+
 @MainActor
 final class AccountSwitcherViewModel: ObservableObject {
     @Published private(set) var accounts: [ManagedAccount] = []
@@ -52,15 +65,47 @@ final class AccountSwitcherViewModel: ObservableObject {
     private var quotaRefreshGeneration = 0
     private var lastQuotaSuccessAt: [Int: Date] = [:]
     private var quotaRateLimitedUntil: [Int: Date] = [:]
+    private var backgroundRefreshTimer: Timer?
     private static let quotaRefreshCooldown: TimeInterval = 60
+    private static let backgroundRefreshInterval: TimeInterval = 300
 
     init(store: ClaudeAccountStore = ClaudeAccountStore()) {
         self.store = store
         loadCachedQuotaInformation()
+        registerWorkspaceObservers()
+        startBackgroundRefresh()
     }
 
     deinit {
         quotaTask?.cancel()
+    }
+
+    var activeAccount: ManagedAccount? {
+        accounts.first(where: \.isActive)
+    }
+
+    var activeQuotaPercent: Double? {
+        guard let activeAccount,
+              case .loaded(let info) = quotaStates[activeAccount.number] else {
+            return nil
+        }
+        return Self.maxPercent(in: info)
+    }
+
+    var activeQuotaSeverity: QuotaSeverity? {
+        activeQuotaPercent.map(QuotaSeverity.init(percent:))
+    }
+
+    private static func maxPercent(in info: AccountQuotaInfo) -> Double? {
+        switch info {
+        case .personal(_, let fiveHour, let sevenDay):
+            let values = [fiveHour?.usedPercentage, sevenDay?.usedPercentage].compactMap { $0 }
+            return values.max()
+        case .monetary(_, let quota):
+            return quota.usedPercentage
+        case .unavailable:
+            return nil
+        }
     }
 
     var currentTitle: String {
@@ -352,6 +397,41 @@ final class AccountSwitcherViewModel: ObservableObject {
         let updatedAt = Date()
         lastQuotaUpdatedAt = updatedAt
         store.writeQuotaSnapshot(AccountQuotaCacheSnapshot(updatedAt: updatedAt, entries: entries))
+    }
+
+    private func startBackgroundRefresh() {
+        backgroundRefreshTimer?.invalidate()
+        let timer = Timer(timeInterval: Self.backgroundRefreshInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.loadQuotaInformation()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        backgroundRefreshTimer = timer
+    }
+
+    private func registerWorkspaceObservers() {
+        let nc = NSWorkspace.shared.notificationCenter
+        nc.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.backgroundRefreshTimer?.invalidate()
+                self?.backgroundRefreshTimer = nil
+            }
+        }
+        nc.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.startBackgroundRefresh()
+                self?.loadQuotaInformation()
+            }
+        }
     }
 
     private func run(_ action: @escaping () throws -> Void, onSuccess: (() -> Void)? = nil) {

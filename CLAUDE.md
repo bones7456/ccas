@@ -28,7 +28,8 @@ There is no test target. Verification is manual against the app bundle.
 
 - `CCASApp.swift` — `@main` entry; sets `NSApplication.setActivationPolicy(.accessory)` and renders `MenuBarExtra`.
 - `MenuContentView.swift` — popover UI.
-- `AccountSwitcherViewModel.swift` — `@MainActor` `ObservableObject`. Owns quota fetching, cooldown bookkeeping, and rate-limit state.
+- `MenuBarLabel.swift` — SwiftUI view used as the `MenuBarExtra` label. Draws a ring icon (center `#N` for `N ≤ 9` else bare `N`, color-coded progress arc) when there is an active managed account; falls back to the original template icon otherwise. Arc starts at 12 o'clock clockwise; thresholds are <70% green / 70–85% orange / ≥85% muted red.
+- `AccountSwitcherViewModel.swift` — `@MainActor` `ObservableObject`. Owns quota fetching, cooldown bookkeeping, and rate-limit state. Also drives a 5-minute background `Timer` and `NSWorkspace` sleep/wake observers so the menu bar ring stays current without requiring the user to open the menu. Exposes `activeAccount` / `activeQuotaPercent` / `activeQuotaSeverity` for `MenuBarLabel`.
 - `ClaudeAccountStore.swift` — the core. All Claude Code config / Keychain / quota I/O lives here.
 - `KeychainClient.swift` — shells out to `/usr/bin/security` rather than using the `SecKey` API (see "Keychain quirks" below).
 - `FileLock.swift` — `flock`-based exclusive lock around `~/.ccas/.lock` for switch operations.
@@ -44,7 +45,7 @@ CCAS owns these locations — never mix them up with Claude Code's own state:
 |---|---|---|
 | `~/.claude.json` or `~/.claude/.claude.json` | Claude Code | Live config. CCAS picks the most recently modified file that contains `oauthAccount`. |
 | Keychain `Claude Code-credentials` | Claude Code | Live OAuth credentials. CCAS overwrites this on switch. |
-| `~/.ccas/sequence.json` | CCAS | Index: `{ activeAccountNumber, sequence: [Int], accounts: [String: AccountRecord], lastUpdated }`. Account numbers are stringified Int keys, monotonically increasing. |
+| `~/.ccas/sequence.json` | CCAS | Index: `{ activeAccountNumber, sequence: [Int], accounts: [String: AccountRecord], lastUpdated }`. Account numbers are stringified Int keys. Allocation reuses the lowest free positive integer (so deleting `#2` from `{1, 2, 3}` and re-adding gives the new account `#2`), but `sequence` is still append-on-add, so the reused slot lands at the end of the display order. |
 | `~/.ccas/configs/.claude-config-<n>-<email>.json` | CCAS | Per-account snapshot of `~/.claude.json`. Not sufficient to restore an account alone — OAuth tokens live in Keychain. |
 | `~/.ccas/quota-cache.json` | CCAS | Last-known quota per account; shown immediately on menu open before live refresh. |
 | `~/.ccas/.lock` | CCAS | `flock` target serializing switch operations. |

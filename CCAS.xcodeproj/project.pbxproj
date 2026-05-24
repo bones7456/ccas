@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -18,6 +18,7 @@
 		3FC031405BD6435B2C9E5A69 /* CCASApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C38CD33B1A9D4C96AC52DD73 /* CCASApp.swift */; };
 		6AD06373EF9CE1A51C62F005 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 846629B2CA5488AB70372DD7 /* AppIcon.icns */; };
 		996AACB6383C3AAAC8D9ECBC /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = C6BB9E061BAE27BF48E03A39 /* AppIcon.png */; };
+		A299EC3E2FC2F74E00D868F4 /* MenuBarLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A299EC3D2FC2F74E00D868F4 /* MenuBarLabel.swift */; };
 		BA201F353F4CD05560617372 /* KeychainClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFB2F3AB133F03C0BBC5531 /* KeychainClient.swift */; };
 		D2BDA721FBF4254A159EC4A0 /* MenuContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AFC3F8BFD3587A1E8A829CD /* MenuContentView.swift */; };
 		E3A89246EA5DC02B336EF637 /* AppAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E4B5C3CADFF9F9627F2E4B /* AppAssets.swift */; };
@@ -37,6 +38,7 @@
 		6CD128EEDB27B99770BF239D /* FileLock.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileLock.swift; sourceTree = "<group>"; };
 		8314B04B6EEF533AF90C4B6A /* AccountSwitcherViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccountSwitcherViewModel.swift; sourceTree = "<group>"; };
 		846629B2CA5488AB70372DD7 /* AppIcon.icns */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		A299EC3D2FC2F74E00D868F4 /* MenuBarLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarLabel.swift; sourceTree = "<group>"; };
 		B7E4B5C3CADFF9F9627F2E4B /* AppAssets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppAssets.swift; sourceTree = "<group>"; };
 		C38CD33B1A9D4C96AC52DD73 /* CCASApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CCASApp.swift; sourceTree = "<group>"; };
 		C6BB9E061BAE27BF48E03A39 /* AppIcon.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = AppIcon.png; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 				8314B04B6EEF533AF90C4B6A /* AccountSwitcherViewModel.swift */,
 				B7E4B5C3CADFF9F9627F2E4B /* AppAssets.swift */,
 				C38CD33B1A9D4C96AC52DD73 /* CCASApp.swift */,
+				A299EC3D2FC2F74E00D868F4 /* MenuBarLabel.swift */,
 				E2E09256BDA0355EF9617953 /* ClaudeAccountStore.swift */,
 				6CD128EEDB27B99770BF239D /* FileLock.swift */,
 				0FFB2F3AB133F03C0BBC5531 /* KeychainClient.swift */,
@@ -170,36 +173,17 @@
 				Base,
 			);
 			mainGroup = 31AD8F853EE0643D71CA3853;
-			productRefGroup = 22D194910D0D4106B92554B7 /* Products */;
-			projectDirPath = "";
-			projectRoot = "";
 			packageReferences = (
 				F5A100001000000000000007 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
+			productRefGroup = 22D194910D0D4106B92554B7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
 			targets = (
 				2CA3371AF4FD8B90E40C0A66 /* CCAS */,
 			);
 		};
 /* End PBXProject section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		F5A100001000000000000007 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sparkle-project/Sparkle";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.6.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		F5A100001000000000000004 /* Sparkle */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F5A100001000000000000007 /* XCRemoteSwiftPackageReference "Sparkle" */;
-			productName = Sparkle;
-		};
-/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXResourcesBuildPhase section */
 		41BD0C17CC55B1D6C3B29006 /* Resources */ = {
@@ -227,6 +211,7 @@
 				1FFD8601D00F7619C25C8F08 /* ClaudeAccountStore.swift in Sources */,
 				1C2F90FFC2E7926472C5ADF0 /* FileLock.swift in Sources */,
 				BA201F353F4CD05560617372 /* KeychainClient.swift in Sources */,
+				A299EC3E2FC2F74E00D868F4 /* MenuBarLabel.swift in Sources */,
 				31F3547CE747635DECE6C9B9 /* Localization.swift in Sources */,
 				D2BDA721FBF4254A159EC4A0 /* MenuContentView.swift in Sources */,
 				F5A100001000000000000001 /* UpdateController.swift in Sources */,
@@ -286,7 +271,8 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
@@ -301,7 +287,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = RHVTXHK83V;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -309,9 +295,12 @@
 				INFOPLIST_FILE = Sources/CCASApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Claude Code Account Switcher";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.4.4;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = li.luy.ccas;
 				PRODUCT_NAME = CCAS;
 				SDKROOT = macosx;
@@ -330,7 +319,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = RHVTXHK83V;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -338,9 +327,12 @@
 				INFOPLIST_FILE = Sources/CCASApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Claude Code Account Switcher";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.4.4;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = li.luy.ccas;
 				PRODUCT_NAME = CCAS;
 				SDKROOT = macosx;
@@ -434,6 +426,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F5A100001000000000000007 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F5A100001000000000000004 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F5A100001000000000000007 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = FCC040C5517DA7BB4D93AF30 /* Project object */;
 }

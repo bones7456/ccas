@@ -17,7 +17,7 @@ struct CCASApp: App {
         MenuBarExtra {
             MenuContentView(viewModel: viewModel, updateController: updateController)
         } label: {
-            Image(nsImage: AppAssets.menuBarIcon())
+            MenuBarLabel(viewModel: viewModel)
         }
         .menuBarExtraStyle(.window)
     }
