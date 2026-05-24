@@ -47,9 +47,6 @@ private struct RingIcon: View {
     let severity: QuotaSeverity?
 
     private static let trackColor = Color.secondary.opacity(0.35)
-    private static let normalColor = Color(red: 0.30, green: 0.72, blue: 0.45)
-    private static let warningColor = Color(red: 0.95, green: 0.62, blue: 0.20)
-    private static let criticalColor = Color(red: 0.86, green: 0.36, blue: 0.36)
 
     private var progress: Double {
         guard let percent else { return 0 }
@@ -57,12 +54,7 @@ private struct RingIcon: View {
     }
 
     private var ringColor: Color {
-        guard let severity else { return Self.trackColor }
-        switch severity {
-        case .normal: return Self.normalColor
-        case .warning: return Self.warningColor
-        case .critical: return Self.criticalColor
-        }
+        severity?.color ?? Self.trackColor
     }
 
     private var label: String {

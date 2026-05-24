@@ -124,6 +124,7 @@ struct MenuContentView: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.97)))
             }
         }
+        .background(MenuBackgroundView())
         .id(languageRevision)
         .animation(.easeInOut(duration: 0.12), value: confirmation)
         .onAppear {
@@ -389,6 +390,7 @@ private struct QuotaProgressLine: View {
 
                 ProgressView(value: progressValue)
                     .progressViewStyle(.linear)
+                    .tint(QuotaSeverity(percent: window.usedPercentage).color)
 
                 Text(percentText)
                     .font(.caption2.monospacedDigit())
@@ -444,6 +446,7 @@ private struct MonetaryQuotaLine: View {
             if let percentage = quota.usedPercentage {
                 ProgressView(value: min(max(percentage / 100, 0), 1))
                     .progressViewStyle(.linear)
+                    .tint(QuotaSeverity(percent: percentage).color)
             }
 
             if let resetsAt = quota.resetsAt {
@@ -489,6 +492,19 @@ private struct MonetaryQuotaLine: View {
         formatter.timeStyle = .short
         return formatter
     }()
+}
+
+private struct MenuBackgroundView: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .menu
+        view.blendingMode = .behindWindow
+        view.state = .active
+        view.isEmphasized = true
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
 private struct ConfirmationOverlay: View {

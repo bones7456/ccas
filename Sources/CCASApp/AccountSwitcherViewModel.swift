@@ -47,6 +47,14 @@ enum QuotaSeverity {
         default: self = .critical
         }
     }
+
+    var color: Color {
+        switch self {
+        case .normal: return Color(red: 0.30, green: 0.72, blue: 0.45)
+        case .warning: return Color(red: 0.95, green: 0.62, blue: 0.20)
+        case .critical: return Color(red: 0.86, green: 0.36, blue: 0.36)
+        }
+    }
 }
 
 @MainActor
@@ -89,18 +97,17 @@ final class AccountSwitcherViewModel: ObservableObject {
               case .loaded(let info) = quotaStates[activeAccount.number] else {
             return nil
         }
-        return Self.maxPercent(in: info)
+        return Self.menuBarPercent(in: info)
     }
 
     var activeQuotaSeverity: QuotaSeverity? {
         activeQuotaPercent.map(QuotaSeverity.init(percent:))
     }
 
-    private static func maxPercent(in info: AccountQuotaInfo) -> Double? {
+    private static func menuBarPercent(in info: AccountQuotaInfo) -> Double? {
         switch info {
-        case .personal(_, let fiveHour, let sevenDay):
-            let values = [fiveHour?.usedPercentage, sevenDay?.usedPercentage].compactMap { $0 }
-            return values.max()
+        case .personal(_, let fiveHour, _):
+            return fiveHour?.usedPercentage
         case .monetary(_, let quota):
             return quota.usedPercentage
         case .unavailable:
