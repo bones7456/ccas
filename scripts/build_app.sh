@@ -50,6 +50,19 @@ if [ -d "$RESOURCE_SOURCE_DIR" ]; then
     cp -R "$RESOURCE_SOURCE_DIR/." "$RESOURCES_DIR/"
 fi
 
+# Embed Sparkle.framework. SwiftPM links against the XCFramework's binary but
+# does not copy it into the .app — we have to do it ourselves so @rpath lookup
+# at @executable_path/../Frameworks resolves at launch.
+FRAMEWORKS_DIR="$CONTENTS_DIR/Frameworks"
+SPARKLE_SRC="$(find "$ROOT_DIR/.build/artifacts" -type d -path '*/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework' -print -quit)"
+if [ -z "$SPARKLE_SRC" ]; then
+    echo "error: Sparkle.framework not found under .build/artifacts; run 'swift package resolve' first" >&2
+    exit 1
+fi
+mkdir -p "$FRAMEWORKS_DIR"
+rm -rf "$FRAMEWORKS_DIR/Sparkle.framework"
+cp -R "$SPARKLE_SRC" "$FRAMEWORKS_DIR/Sparkle.framework"
+
 cp "$INFO_PLIST" "$CONTENTS_DIR/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $PRODUCT_BUNDLE_IDENTIFIER" "$CONTENTS_DIR/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $MARKETING_VERSION" "$CONTENTS_DIR/Info.plist"

@@ -11,10 +11,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct CCASApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var viewModel = AccountSwitcherViewModel()
+    @StateObject private var updateController = UpdateController()
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContentView(viewModel: viewModel)
+            MenuContentView(viewModel: viewModel, updateController: updateController)
         } label: {
             Image(nsImage: AppAssets.menuBarIcon())
         }

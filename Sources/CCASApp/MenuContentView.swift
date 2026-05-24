@@ -8,6 +8,7 @@ enum PendingConfirmation: Equatable {
 
 struct MenuContentView: View {
     @ObservedObject var viewModel: AccountSwitcherViewModel
+    @ObservedObject var updateController: UpdateController
     @State private var languageRevision = 0
     @State private var quotaClock = Date()
     @State private var confirmation: PendingConfirmation?
@@ -82,6 +83,13 @@ struct MenuContentView: View {
                             } label: {
                                 Label(L10n.string(.revealInFinder), systemImage: "folder")
                             }
+
+                            Button {
+                                updateController.checkForUpdates()
+                            } label: {
+                                Label(L10n.string(.checkForUpdates), systemImage: "arrow.down.circle")
+                            }
+                            .disabled(!updateController.canCheckForUpdates)
 
                             Button(role: .destructive) {
                                 confirmation = .purge

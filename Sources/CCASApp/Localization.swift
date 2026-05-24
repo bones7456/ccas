@@ -6,6 +6,7 @@ enum L10n {
         case addAccount
         case alreadyCurrent
         case cancel
+        case checkForUpdates
         case claudeCode
         case currentAccount
         case errorAccountNotFound
@@ -99,6 +100,7 @@ enum L10n {
         .addAccount: "Add Account",
         .alreadyCurrent: "This account is already active",
         .cancel: "Cancel",
+        .checkForUpdates: "Check for Updates…",
         .claudeCode: "Claude Code",
         .currentAccount: "Current account",
         .errorAccountNotFound: "Account %d was not found.",
@@ -159,6 +161,7 @@ enum L10n {
         .addAccount: "添加账号",
         .alreadyCurrent: "已经是当前账号",
         .cancel: "取消",
+        .checkForUpdates: "检查更新…",
         .claudeCode: "Claude Code",
         .currentAccount: "当前账号",
         .errorAccountNotFound: "没有找到账号 %d。",

@@ -34,11 +34,14 @@ cd "$ROOT_DIR"
 
 BUILT_APP="$DIST_DIR/CCAS.app"
 MARKETING_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$BUILT_APP/Contents/Info.plist")"
+BUILD_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$BUILT_APP/Contents/Info.plist")"
+MIN_SYSTEM_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$BUILT_APP/Contents/Info.plist")"
 BASENAME="CCAS-${MARKETING_VERSION}"
 STAGED_ZIP="$STAGE_DIR/${BASENAME}.zip"
 STAGED_DMG="$STAGE_DIR/${BASENAME}.dmg"
 ZIP_PATH="$DIST_DIR/${BASENAME}.zip"
 DMG_PATH="$DIST_DIR/${BASENAME}.dmg"
+APPCAST_ITEM="$DIST_DIR/appcast-item.xml"
 
 if [ -z "${SIGNING_IDENTITY:-}" ]; then
     echo "SIGNING_IDENTITY not set; produced unsigned $BUILT_APP" >&2
@@ -116,6 +119,58 @@ rm -f "$ZIP_PATH" "$DMG_PATH"
 cp "$STAGED_ZIP" "$ZIP_PATH"
 cp "$STAGED_DMG" "$DMG_PATH"
 
+# Build a Sparkle appcast <item> snippet. CI consumes APPCAST_ITEM and merges
+# it into the published appcast.xml on gh-pages. Inline the GFM-rendered HTML
+# notes (per DealChangelog.md) instead of pointing at a remote URL so Sparkle
+# does not load GitHub's full release page inside its WebView.
+if [ -z "${GITHUB_REPOSITORY:-}" ]; then
+    GITHUB_REPOSITORY="bones7456/ccas"
+fi
+SPARKLE_TAG="${SPARKLE_TAG:-v${MARKETING_VERSION}}"
+ZIP_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${SPARKLE_TAG}/${BASENAME}.zip"
+FULL_NOTES_URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${SPARKLE_TAG}"
+ZIP_LENGTH="$(stat -f%z "$ZIP_PATH")"
+
+SIGN_UPDATE="$(find "$ROOT_DIR/.build/artifacts" -type f -name sign_update -not -path '*old_dsa*' -print -quit)"
+if [ -z "$SIGN_UPDATE" ]; then
+    echo "error: sign_update not found under .build/artifacts; run 'swift package resolve' first" >&2
+    exit 1
+fi
+
+SIGN_ARGS=()
+if [ -n "${SPARKLE_PRIVATE_KEY_FILE:-}" ]; then
+    SIGN_ARGS+=(--ed-key-file "$SPARKLE_PRIVATE_KEY_FILE")
+fi
+
+echo "==> Signing ZIP with EdDSA"
+ED_SIG_ATTRS="$("$SIGN_UPDATE" "${SIGN_ARGS[@]}" "$ZIP_PATH")"
+# sign_update prints e.g. ` sparkle:edSignature="..." length="..."` (note leading space)
+ED_SIG_ATTRS="${ED_SIG_ATTRS# }"
+
+if [ -n "${SPARKLE_RELEASE_NOTES_FILE:-}" ] && [ -s "${SPARKLE_RELEASE_NOTES_FILE}" ]; then
+    NOTES_HTML="$(cat "$SPARKLE_RELEASE_NOTES_FILE")"
+else
+    NOTES_HTML="<p>See <a href=\"${FULL_NOTES_URL}\">release notes on GitHub</a>.</p>"
+fi
+
+PUB_DATE="$(LC_TIME=en_US date -u "+%a, %d %b %Y %H:%M:%S +0000")"
+
+cat > "$APPCAST_ITEM" <<EOF
+        <item>
+            <title>Version ${MARKETING_VERSION}</title>
+            <pubDate>${PUB_DATE}</pubDate>
+            <sparkle:version>${BUILD_VERSION}</sparkle:version>
+            <sparkle:shortVersionString>${MARKETING_VERSION}</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>${MIN_SYSTEM_VERSION}</sparkle:minimumSystemVersion>
+            <sparkle:fullReleaseNotesLink>${FULL_NOTES_URL}</sparkle:fullReleaseNotesLink>
+            <description><![CDATA[
+${NOTES_HTML}
+            ]]></description>
+            <enclosure url="${ZIP_URL}" ${ED_SIG_ATTRS} type="application/octet-stream" />
+        </item>
+EOF
+
 echo "==> Artifacts:"
 echo "    $ZIP_PATH"
 echo "    $DMG_PATH"
+echo "    $APPCAST_ITEM"

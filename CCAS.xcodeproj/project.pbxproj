@@ -21,6 +21,8 @@
 		BA201F353F4CD05560617372 /* KeychainClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFB2F3AB133F03C0BBC5531 /* KeychainClient.swift */; };
 		D2BDA721FBF4254A159EC4A0 /* MenuContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AFC3F8BFD3587A1E8A829CD /* MenuContentView.swift */; };
 		E3A89246EA5DC02B336EF637 /* AppAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E4B5C3CADFF9F9627F2E4B /* AppAssets.swift */; };
+		F5A100001000000000000001 /* UpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A100001000000000000002 /* UpdateController.swift */; };
+		F5A100001000000000000003 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = F5A100001000000000000004 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +42,7 @@
 		C6BB9E061BAE27BF48E03A39 /* AppIcon.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = AppIcon.png; sourceTree = "<group>"; };
 		C9F95CF2C79016C58798E736 /* CCAS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CCAS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2E09256BDA0355EF9617953 /* ClaudeAccountStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeAccountStore.swift; sourceTree = "<group>"; };
+		F5A100001000000000000002 /* UpdateController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UpdateController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -48,6 +51,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1C38162F17CDFFC7955C5DDC /* Cocoa.framework in Frameworks */,
+				F5A100001000000000000003 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -111,6 +115,7 @@
 				0FFB2F3AB133F03C0BBC5531 /* KeychainClient.swift */,
 				4FF22FE85744B125BA1E8E91 /* Localization.swift */,
 				2AFC3F8BFD3587A1E8A829CD /* MenuContentView.swift */,
+				F5A100001000000000000002 /* UpdateController.swift */,
 				5FACD0CE9FE38115F004F24D /* Info.plist */,
 			);
 			name = CCASApp;
@@ -133,6 +138,9 @@
 			dependencies = (
 			);
 			name = CCAS;
+			packageProductDependencies = (
+				F5A100001000000000000004 /* Sparkle */,
+			);
 			productName = CCAS;
 			productReference = C9F95CF2C79016C58798E736 /* CCAS.app */;
 			productType = "com.apple.product-type.application";
@@ -165,11 +173,33 @@
 			productRefGroup = 22D194910D0D4106B92554B7 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
+			packageReferences = (
+				F5A100001000000000000007 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			targets = (
 				2CA3371AF4FD8B90E40C0A66 /* CCAS */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F5A100001000000000000007 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F5A100001000000000000004 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F5A100001000000000000007 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXResourcesBuildPhase section */
 		41BD0C17CC55B1D6C3B29006 /* Resources */ = {
@@ -199,6 +229,7 @@
 				BA201F353F4CD05560617372 /* KeychainClient.swift in Sources */,
 				31F3547CE747635DECE6C9B9 /* Localization.swift in Sources */,
 				D2BDA721FBF4254A159EC4A0 /* MenuContentView.swift in Sources */,
+				F5A100001000000000000001 /* UpdateController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -270,7 +301,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = RHVTXHK83V;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -280,7 +311,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.4.2;
+				MARKETING_VERSION = 0.4.3;
 				PRODUCT_BUNDLE_IDENTIFIER = li.luy.ccas;
 				PRODUCT_NAME = CCAS;
 				SDKROOT = macosx;
@@ -299,7 +330,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = RHVTXHK83V;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -309,7 +340,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.4.2;
+				MARKETING_VERSION = 0.4.3;
 				PRODUCT_BUNDLE_IDENTIFIER = li.luy.ccas;
 				PRODUCT_NAME = CCAS;
 				SDKROOT = macosx;
