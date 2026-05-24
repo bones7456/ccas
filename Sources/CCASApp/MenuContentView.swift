@@ -77,6 +77,12 @@ struct MenuContentView: View {
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .contextMenu {
+                            Button {
+                                revealCCASDirectoryInFinder()
+                            } label: {
+                                Label(L10n.string(.revealInFinder), systemImage: "folder")
+                            }
+
                             Button(role: .destructive) {
                                 confirmation = .purge
                             } label: {
@@ -125,6 +131,13 @@ struct MenuContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification)) { _ in
             languageRevision += 1
         }
+    }
+
+    private func revealCCASDirectoryInFinder() {
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".ccas", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(directory)
     }
 
     private var header: some View {
@@ -273,7 +286,7 @@ private struct AccountRow: View {
             guard plan != .unknown else {
                 return nil
             }
-            return plan.displayName.lowercased()
+            return plan.displayName
         case .unavailable:
             return nil
         }

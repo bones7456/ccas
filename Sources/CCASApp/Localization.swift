@@ -51,6 +51,7 @@ enum L10n {
         case removeAccountConfirm
         case removeAccountConfirmBody
         case removeAccountConfirmTitle
+        case revealInFinder
         case signedOut
         case statusAddedAccount
         case statusPurged
@@ -143,6 +144,7 @@ enum L10n {
         .removeAccountConfirm: "Remove",
         .removeAccountConfirmBody: "Account %d (%@) will be deleted from CCAS, along with its Keychain backup and config snapshot.",
         .removeAccountConfirmTitle: "Remove this account?",
+        .revealInFinder: "Show in Finder",
         .signedOut: "Signed out",
         .statusAddedAccount: "Added account %d",
         .statusPurged: "All CCAS data has been removed.",
@@ -202,6 +204,7 @@ enum L10n {
         .removeAccountConfirm: "删除",
         .removeAccountConfirmBody: "账号 %d（%@）以及它在 Keychain 的备份和配置快照都会被删除。",
         .removeAccountConfirmTitle: "确认删除该账号？",
+        .revealInFinder: "在 Finder 中显示",
         .signedOut: "未登录",
         .statusAddedAccount: "已添加账号 %d",
         .statusPurged: "已清除所有 CCAS 数据",
