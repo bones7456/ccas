@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>CCAS</title>
+        <link>https://bones7456.github.io/ccas/appcast.xml</link>
+        <description>Updates for Claude Code Account Switcher.</description>
+        <language>en</language>
+        <item>
+            <title>Version 0.4.3</title>
+            <pubDate>Sun, 24 May 2026 07:55:12 +0000</pubDate>
+            <sparkle:version>10</sparkle:version>
+            <sparkle:shortVersionString>0.4.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:fullReleaseNotesLink>https://github.com/bones7456/ccas/releases/tag/v0.4.3</sparkle:fullReleaseNotesLink>
+            <description>
+&lt;h2 dir="auto"&gt;Changes&lt;/h2&gt;
+&lt;ul dir="auto"&gt;
+&lt;li&gt;Declare sparkle namespace on appcast item snippet (&lt;a href="https://github.com/bones7456/ccas/commit/9c7d2b44c8592a070bc649e3c18090abc61ea72e"&gt;&lt;code class="notranslate"&gt;9c7d2b4&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Integrate Sparkle auto-updater and bump to 0.4.3 (&lt;a href="https://github.com/bones7456/ccas/commit/6ae8f2e48e561cb5f9a0f45f61f57ea54df7bd11"&gt;&lt;code class="notranslate"&gt;6ae8f2e&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Add Show in Finder menu and capitalize plan label (&lt;a href="https://github.com/bones7456/ccas/commit/f6aae277661839078fbd8d35b1514e8b7586636b"&gt;&lt;code class="notranslate"&gt;f6aae27&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p dir="auto"&gt;&lt;strong&gt;Full Changelog&lt;/strong&gt;: &lt;a class="commit-link" href="https://github.com/bones7456/ccas/compare/v0.4.2...v0.4.3"&gt;&lt;tt&gt;v0.4.2...v0.4.3&lt;/tt&gt;&lt;/a&gt;&lt;/p&gt;
+    </description>
+            <enclosure url="https://github.com/bones7456/ccas/releases/download/v0.4.3/CCAS-0.4.3.zip" sparkle:edSignature="PzBKupMvM5SLnoWG/mnEKsvjP64IMAKzVdWSdJxbdjs2uJmAg7FPbwdztiLBg8n6tY7B9kmG992KA/QJ3SBoBg==" length="2745380" type="application/octet-stream" />
+        </item>
+    </channel>
+</rss>
