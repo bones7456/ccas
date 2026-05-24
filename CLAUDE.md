@@ -56,7 +56,11 @@ Wrapped in `FileLock.withExclusiveLock`. The sequence is: snapshot current accou
 
 ### Quota fetch
 
-Live usage: `GET https://api.anthropic.com/api/oauth/usage` with `Authorization: Bearer <accessToken>` and `anthropic-beta: oauth-2025-04-20`. OAuth refresh: `POST https://platform.claude.com/v1/oauth/token`, `grant_type=refresh_token`. Both run from per-account credentials in the CCAS Keychain backup; refreshed tokens are written back to both the backup and (if the account is active) `Claude Code-credentials`.
+Live usage: `GET https://api.anthropic.com/api/oauth/usage` with `Authorization: Bearer <accessToken>` and `anthropic-beta: oauth-2025-04-20`. OAuth refresh: `POST https://platform.claude.com/v1/oauth/token`, `grant_type=refresh_token`.
+
+**Active accounts are never refreshed by CCAS — Claude Code owns those credentials.** The active account's tokens are read directly from `Claude Code-credentials` (the live Keychain) on every usage poll, never from the backup. Anthropic's token endpoint rotates the refresh token on every refresh and invalidates the old one; if CCAS refreshed the active account, it would race Claude Code's own background refreshes and whichever side refreshed second would get `invalid_grant`. If the live access token happens to be expired when usage is polled, surface as unavailable — Claude Code's next run will refresh it.
+
+Inactive accounts are read from the backup Keychain and CCAS does refresh them when expiring/expired, persisting the rotated refresh token back to the backup. Nothing else touches an inactive account's backup, so this loop is safe.
 
 `AccountSwitcherViewModel.loadQuotaInformation` enforces a 60s per-account cooldown and honors `Retry-After` on 429s by storing `quotaRateLimitedUntil[number]`. A `quotaRefreshGeneration` counter cancels stale in-flight refreshes when the user reopens the menu.
 
@@ -74,6 +78,8 @@ Older `sequence.json` files predate `organizationUuid` / `organizationName`. `mi
 - `security ... -w` prints the password as **lowercase hex with no `0x` prefix** whenever stored bytes contain any non-printable ASCII. Claude Code's pretty-printed JSON credentials trigger this path because they contain `\n`. `decodedFromHexOutput` decodes it; if you touch `passwordString`, preserve both the hex and UTF-8 branches.
 - Writes use `add-generic-password -X <hex>` after deleting all matching entries (loop in `removeAllMatching`) — `security` does not have an upsert, and stale duplicates accumulate otherwise.
 - `isNotFound` checks `terminationStatus == 44` **and** scans stderr for "could not be found" — both forms occur depending on the macOS version.
+
+**Claude Code's keychain entry is multi-tenant.** A single `Claude Code-credentials` entry holds Claude OAuth AND every MCP plugin's OAuth as top-level keys (`claudeAiOauth` + `mcpOAuth`). Between sign-out and sign-in the entry can transiently lack `claudeAiOauth` while `mcpOAuth` still populates it — non-empty but useless to us. Any code path that snapshots live → backup (add, switch) or restores backup → live (switch) MUST gate the write through `hasUsableClaudeOAuthPayload` (presence + non-empty `claudeAiOauth.accessToken`). Writing such a blob silently corrupts the destination and Claude Code prompts /login on the next read.
 
 `DebugLogger` is a no-op in release builds (`#if DEBUG`). Don't replace its callsites with `print`/`NSLog` directly.
 

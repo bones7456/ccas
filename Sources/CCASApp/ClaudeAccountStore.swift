@@ -112,6 +112,10 @@ final class ClaudeAccountStore {
             logger.error("add account failed reason=noClaudeCredentials")
             throw AccountSwitcherError.noClaudeCredentials
         }
+        guard hasUsableClaudeOAuthPayload(currentCredentials) else {
+            logger.error("add account failed reason=incompleteLiveCredentials")
+            throw AccountSwitcherError.noClaudeCredentials
+        }
 
         let configURL = claudeConfigURL()
         guard fileManager.fileExists(atPath: configURL.path) else {
@@ -210,6 +214,12 @@ final class ClaudeAccountStore {
                 logger.error("switch account failed reason=missingRollbackCredentials currentNumber=\(currentNumber)")
                 throw AccountSwitcherError.missingCredentials(currentNumber, currentIdentity.email)
             }
+            // Bail out rather than overwrite the backup with a transient
+            // mcpOAuth-only blob (see hasUsableClaudeOAuthPayload).
+            guard hasUsableClaudeOAuthPayload(liveCredentials) else {
+                logger.error("switch account failed reason=incompleteLiveCredentials currentNumber=\(currentNumber)")
+                throw AccountSwitcherError.noClaudeCredentials
+            }
 
             try writeAccountCredentials(
                 number: String(currentNumber),
@@ -236,6 +246,13 @@ final class ClaudeAccountStore {
                 }
                 guard !targetCredentials.isEmpty else {
                     logger.error("switch account failed reason=missingTargetCredentials targetNumber=\(number)")
+                    throw AccountSwitcherError.missingCredentials(number, target.email)
+                }
+                // Don't write a backup that lacks claudeAiOauth back to live —
+                // Claude Code would treat it as signed-out and prompt /login.
+                // Surface as missingCredentials so the user knows to re-add.
+                guard hasUsableClaudeOAuthPayload(targetCredentials) else {
+                    logger.error("switch account failed reason=incompleteTargetCredentials targetNumber=\(number)")
                     throw AccountSwitcherError.missingCredentials(number, target.email)
                 }
 
@@ -358,18 +375,33 @@ final class ClaudeAccountStore {
     }
 
     func usageInfo(for account: ManagedAccount) async throws -> AccountQuotaInfo {
-        let number = String(account.number)
-        let credentials = try readAccountCredentials(number: number, email: account.record.email)
-        guard !credentials.isEmpty else {
-            throw AccountSwitcherError.missingCredentials(account.number, account.record.email)
+        // For the active account, always read from the live Keychain — Claude
+        // Code owns that vault and rotates refresh tokens in the background.
+        // Reading from our backup would hit a stale refresh token after a few
+        // hours, and refreshing from CCAS would race Claude Code and
+        // invalidate whichever side refreshed second.
+        let credentialsString: String
+        if account.isActive {
+            guard let live = try readCurrentCredentials(), !live.isEmpty else {
+                throw AccountSwitcherError.missingCredentials(account.number, account.record.email)
+            }
+            credentialsString = live
+        } else {
+            credentialsString = try readAccountCredentials(
+                number: String(account.number),
+                email: account.record.email
+            )
+            guard !credentialsString.isEmpty else {
+                throw AccountSwitcherError.missingCredentials(account.number, account.record.email)
+            }
         }
 
-        var parsed = try parseClaudeCredentials(credentials)
+        var parsed = try parseClaudeCredentials(credentialsString)
         guard parsed.oauth.scopes.contains(claudeAIProfileScope) else {
             return .unavailable(L10n.string(.quotaUnavailable))
         }
 
-        if parsed.oauth.isExpiringSoon {
+        if !account.isActive && parsed.oauth.isExpiringSoon {
             try await refreshAndStoreOAuthCredentials(&parsed, for: account)
         }
 
@@ -377,6 +409,12 @@ final class ClaudeAccountStore {
             let object = try await fetchUsageObject(accessToken: parsed.oauth.accessToken)
             return usageInfo(from: object, plan: parsed.oauth.plan)
         } catch QuotaFetchError.unauthorized {
+            if account.isActive {
+                // The live access token is expired. Don't refresh — that would
+                // invalidate Claude Code's refresh token. Claude Code will
+                // refresh on its next run; show unavailable until then.
+                return .unavailable(L10n.string(.quotaUnavailable))
+            }
             try await refreshAndStoreOAuthCredentials(&parsed, for: account)
             let object = try await fetchUsageObject(accessToken: parsed.oauth.accessToken)
             return usageInfo(from: object, plan: parsed.oauth.plan)
@@ -464,6 +502,25 @@ final class ClaudeAccountStore {
 
     private func readCurrentCredentials() throws -> String? {
         try keychain.readGenericPasswordItem(service: claudeCredentialsService)?.password
+    }
+
+    // Claude Code stores Claude OAuth and MCP plugin OAuth in the SAME
+    // `Claude Code-credentials` Keychain entry, as top-level keys
+    // `claudeAiOauth` / `mcpOAuth`. Between sign-out and sign-in the entry
+    // can transiently contain only `mcpOAuth` — non-empty but useless. If we
+    // snapshot that into a backup, or write it back to live during a switch,
+    // the destination silently loses its claudeAiOauth and Claude Code
+    // prompts /login. Validate before any such write.
+    private func hasUsableClaudeOAuthPayload(_ raw: String) -> Bool {
+        guard let data = raw.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let oauth = json["claudeAiOauth"] as? [String: Any],
+              let token = oauth["accessToken"] as? String,
+              !token.isEmpty
+        else {
+            return false
+        }
+        return true
     }
 
     private func writeCurrentCredentials(_ credentials: String) throws {
@@ -699,13 +756,12 @@ final class ClaudeAccountStore {
     }
 
     private func refreshAndStoreOAuthCredentials(_ parsed: inout ParsedClaudeCredentials, for account: ManagedAccount) async throws {
+        // Only ever called for inactive accounts (see usageInfo): the live
+        // Keychain belongs to Claude Code and CCAS must not touch it.
         try await refreshOAuthCredentials(&parsed)
         let updatedCredentials = try encodedCredentials(from: parsed)
         try writeAccountCredentials(number: String(account.number), email: account.record.email, credentials: updatedCredentials)
-        if account.isActive {
-            try writeCurrentCredentials(updatedCredentials)
-        }
-        logger.notice("oauth refresh done number=\(account.number) isActive=\(account.isActive)")
+        logger.notice("oauth refresh done number=\(account.number)")
     }
 
     private func refreshOAuthCredentials(_ parsed: inout ParsedClaudeCredentials) async throws {
