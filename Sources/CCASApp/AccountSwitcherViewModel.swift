@@ -66,8 +66,10 @@ final class AccountSwitcherViewModel: ObservableObject {
     @Published private(set) var lastQuotaUpdatedAt: Date?
     @Published private var statusMessage: StatusMessage = .none
     @Published var isBusy = false
+    @Published private(set) var appearanceTick = false
 
     private let store: ClaudeAccountStore
+    nonisolated(unsafe) private var appearanceObserver: NSObjectProtocol?
     private let logger = DebugLogger(category: "ViewModel")
     private var quotaTask: Task<Void, Never>?
     private var quotaRefreshGeneration = 0
@@ -81,11 +83,13 @@ final class AccountSwitcherViewModel: ObservableObject {
         self.store = store
         loadCachedQuotaInformation()
         registerWorkspaceObservers()
+        registerAppearanceObserver()
         startBackgroundRefresh()
     }
 
     deinit {
         quotaTask?.cancel()
+        if let appearanceObserver { DistributedNotificationCenter.default().removeObserver(appearanceObserver) }
     }
 
     var activeAccount: ManagedAccount? {
@@ -437,6 +441,18 @@ final class AccountSwitcherViewModel: ObservableObject {
             Task { @MainActor [weak self] in
                 self?.startBackgroundRefresh()
                 self?.loadQuotaInformation()
+            }
+        }
+    }
+
+    private func registerAppearanceObserver() {
+        appearanceObserver = DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("AppleInterfaceThemeChangedNotification"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.appearanceTick.toggle()
             }
         }
     }

@@ -10,6 +10,7 @@ struct MenuBarLabel: View {
 
     @MainActor
     private var renderedImage: NSImage {
+        _ = viewModel.appearanceTick
         guard let account = viewModel.activeAccount else {
             return AppAssets.menuBarIcon()
         }
@@ -45,6 +46,7 @@ private struct RingIcon: View {
     let number: Int
     let percent: Double?
     let severity: QuotaSeverity?
+    @Environment(\.colorScheme) private var colorScheme
 
     private static let trackColor = Color.secondary.opacity(0.35)
 
@@ -63,10 +65,20 @@ private struct RingIcon: View {
 
     private static let strokeWidth: CGFloat = 2.5
 
+    private var fillColor: Color {
+        colorScheme == .dark
+            ? Color(white: 0.15)
+            : Color(white: 0.92)
+    }
+
     var body: some View {
         ZStack {
             Circle()
                 .strokeBorder(Self.trackColor, lineWidth: Self.strokeWidth)
+
+            Circle()
+                .inset(by: Self.strokeWidth)
+                .fill(fillColor)
 
             Circle()
                 .inset(by: Self.strokeWidth / 2)
