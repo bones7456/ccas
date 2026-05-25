@@ -13,6 +13,7 @@ struct MenuContentView: View {
     @State private var languageRevision = 0
     @State private var quotaClock = Date()
     @State private var confirmation: PendingConfirmation?
+    @State private var accountListHeight: CGFloat = 100
 
     var body: some View {
         ZStack {
@@ -213,7 +214,7 @@ struct MenuContentView: View {
             .padding(.vertical, 8)
         } else {
             ScrollView {
-                LazyVStack(spacing: 6) {
+                VStack(spacing: 6) {
                     ForEach(viewModel.accounts) { account in
                         AccountRow(
                             account: account,
@@ -225,8 +226,14 @@ struct MenuContentView: View {
                         )
                     }
                 }
+                .background(
+                    GeometryReader { geo in
+                        Color.clear.preference(key: AccountListHeightKey.self, value: geo.size.height)
+                    }
+                )
             }
-            .frame(maxHeight: 420)
+            .frame(height: min(accountListHeight, 420))
+            .onPreferenceChange(AccountListHeightKey.self) { accountListHeight = $0 }
         }
     }
 }
@@ -638,5 +645,12 @@ private extension String {
             return String(local.prefix(2)) + "***" + domain
         }
         return "***" + domain
+    }
+}
+
+private struct AccountListHeightKey: PreferenceKey {
+    nonisolated(unsafe) static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
