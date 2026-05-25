@@ -6,6 +6,25 @@
         <description>Updates for Claude Code Account Switcher.</description>
         <language>en</language>
         <item>
+            <title>Version 0.4.6</title>
+            <pubDate>Mon, 25 May 2026 02:37:49 +0000</pubDate>
+            <sparkle:version>13</sparkle:version>
+            <sparkle:shortVersionString>0.4.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:fullReleaseNotesLink>https://github.com/bones7456/ccas/releases/tag/v0.4.6</sparkle:fullReleaseNotesLink>
+            <description>
+&lt;h2 dir="auto"&gt;Changes&lt;/h2&gt;
+&lt;ul dir="auto"&gt;
+&lt;li&gt;Replace ProgressView with custom QuotaBar for reliable tint, bump to 0.4.6 (&lt;a href="https://github.com/bones7456/ccas/commit/3e37a94c402eaaa16403ed7c1b808ed4fce84b70"&gt;&lt;code class="notranslate"&gt;3e37a94&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Add opaque fill to ring icon, re-render on appearance change (&lt;a href="https://github.com/bones7456/ccas/commit/bbd97c3e1042630905949cf778ab027dc497dc2d"&gt;&lt;code class="notranslate"&gt;bbd97c3&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Tint quota bars by severity, use menu material for popover background (&lt;a href="https://github.com/bones7456/ccas/commit/b551fb5fd608e94e7a697e4778bc7287f9edd8d1"&gt;&lt;code class="notranslate"&gt;b551fb5&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p dir="auto"&gt;&lt;strong&gt;Full Changelog&lt;/strong&gt;: &lt;a class="commit-link" href="https://github.com/bones7456/ccas/compare/v0.4.5...v0.4.6"&gt;&lt;tt&gt;v0.4.5...v0.4.6&lt;/tt&gt;&lt;/a&gt;&lt;/p&gt;
+    </description>
+            <enclosure url="https://github.com/bones7456/ccas/releases/download/v0.4.6/CCAS-0.4.6.zip" sparkle:edSignature="nogWGhPA/FBT0UwFfqFtXYW1gZG4z3Tvmyv6EUlAbB0e7SdCxwPhM5HE2YXYa9lgYvG+SehF6MZO19gqesK9Cw==" length="2780675" type="application/octet-stream" />
+        </item>
+        <item>
             <title>Version 0.4.5</title>
             <pubDate>Sun, 24 May 2026 09:38:33 +0000</pubDate>
             <sparkle:version>12</sparkle:version>
