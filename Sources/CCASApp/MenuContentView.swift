@@ -376,6 +376,24 @@ private struct AccountQuotaView: View {
     }
 }
 
+private struct QuotaBar: View {
+    let value: Double
+    let color: Color
+    private static let height: CGFloat = 6
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.secondary.opacity(0.2))
+                Capsule()
+                    .fill(color)
+                    .frame(width: geo.size.width * min(max(value, 0), 1))
+            }
+        }
+        .frame(height: Self.height)
+    }
+}
+
 private struct QuotaProgressLine: View {
     let title: String
     let window: QuotaWindow
@@ -388,9 +406,10 @@ private struct QuotaProgressLine: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 38, alignment: .leading)
 
-                ProgressView(value: progressValue)
-                    .progressViewStyle(.linear)
-                    .tint(QuotaSeverity(percent: window.usedPercentage).color)
+                QuotaBar(
+                    value: progressValue,
+                    color: QuotaSeverity(percent: window.usedPercentage).color
+                )
 
                 Text(percentText)
                     .font(.caption2.monospacedDigit())
@@ -444,9 +463,10 @@ private struct MonetaryQuotaLine: View {
             }
 
             if let percentage = quota.usedPercentage {
-                ProgressView(value: min(max(percentage / 100, 0), 1))
-                    .progressViewStyle(.linear)
-                    .tint(QuotaSeverity(percent: percentage).color)
+                QuotaBar(
+                    value: percentage / 100,
+                    color: QuotaSeverity(percent: percentage).color
+                )
             }
 
             if let resetsAt = quota.resetsAt {
