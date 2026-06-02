@@ -299,9 +299,18 @@ final class AccountSwitcherViewModel: ObservableObject {
                         return
                     }
                     self.setQuotaState(.loaded(info), for: account.number)
-                    self.lastQuotaSuccessAt[account.number] = Date()
                     self.quotaRateLimitedUntil[account.number] = nil
-                    didUpdate = true
+                    if case .unavailable = info {
+                        // Not a real success: usage couldn't be resolved (typically
+                        // the active account's live token is expired and only Claude
+                        // Code may refresh it — see ClaudeAccountStore.usageInfo).
+                        // Don't arm the 60s cooldown, so the next refresh retries
+                        // this account immediately once the token recovers.
+                        self.lastQuotaSuccessAt.removeValue(forKey: account.number)
+                    } else {
+                        self.lastQuotaSuccessAt[account.number] = Date()
+                        didUpdate = true
+                    }
                 } catch {
                     guard !Task.isCancelled else {
                         return
@@ -396,6 +405,11 @@ final class AccountSwitcherViewModel: ObservableObject {
 
         for (number, state) in quotaStates where accountNumbers.contains(number) {
             guard case .loaded(let info) = state else {
+                continue
+            }
+            // Never persist an unavailable result — a stale "Usage unavailable"
+            // should not survive across launches once the token recovers.
+            if case .unavailable = info {
                 continue
             }
             entries[String(number)] = info
