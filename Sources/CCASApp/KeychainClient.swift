@@ -88,7 +88,7 @@ final class KeychainClient {
         let metadata = try genericPasswordMetadata(service: service)
         let account = metadata.found ? (metadata.account ?? "") : fallbackAccount
 
-        let removed = try removeAllMatching(service: service, account: account)
+        let removed = try removeAllMatching(service: service)
         if removed > 1 {
             logger.notice("cleaned duplicate keychain entries service=\(service) count=\(removed)")
         }
@@ -130,6 +130,33 @@ final class KeychainClient {
             removed += 1
             if removed > 64 {
                 logger.error("remove duplicates aborted service=\(service) afterCount=\(removed)")
+                return removed
+            }
+        }
+    }
+
+    @discardableResult
+    func removeAllMatching(service: String) throws -> Int {
+        var removed = 0
+        while true {
+            let result = try runSecurity([
+                "delete-generic-password",
+                "-s", service
+            ])
+
+            if Self.isNotFound(result) {
+                return removed
+            }
+
+            guard result.terminationStatus == 0 else {
+                let message = Self.message(for: result)
+                logger.error("remove service duplicates failed service=\(service) status=\(result.terminationStatus) message=\(message)")
+                throw AccountSwitcherError.keychain(message)
+            }
+
+            removed += 1
+            if removed > 64 {
+                logger.error("remove service duplicates aborted service=\(service) afterCount=\(removed)")
                 return removed
             }
         }
