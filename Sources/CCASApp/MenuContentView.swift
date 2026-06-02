@@ -233,7 +233,11 @@ struct MenuContentView: View {
                 )
             }
             .frame(height: min(accountListHeight, 420))
-            .onPreferenceChange(AccountListHeightKey.self) { accountListHeight = $0 }
+            .onPreferenceChange(AccountListHeightKey.self) { height in
+                // onPreferenceChange's closure is @Sendable under the Xcode 16.2
+                // SDK, so hop to the main actor before mutating @State.
+                Task { @MainActor in accountListHeight = height }
+            }
         }
     }
 }
