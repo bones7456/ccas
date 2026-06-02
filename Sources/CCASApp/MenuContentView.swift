@@ -437,7 +437,7 @@ private struct QuotaProgressLine: View {
     }
 
     private var percentText: String {
-        "\(Int(window.usedPercentage.rounded()))%"
+        String(format: "%.1f%%", window.usedPercentage)
     }
 
     private static let resetFormatter: DateFormatter = {
@@ -463,7 +463,7 @@ private struct MonetaryQuotaLine: View {
                 Spacer()
 
                 if let percentage = quota.usedPercentage {
-                    Text("\(Int(percentage.rounded()))%")
+                    Text(String(format: "%.1f%%", percentage))
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }

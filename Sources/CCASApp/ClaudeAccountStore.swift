@@ -1043,7 +1043,7 @@ final class ClaudeAccountStore {
             return nil
         }
 
-        let usedPercentage = rawUtilization <= 1 ? rawUtilization * 100 : rawUtilization
+        let usedPercentage = rawUtilization
         let resetsAt = dateValue(object["resets_at"])
             ?? dateValue(object["reset_at"])
             ?? dateValue(object["resetsAt"])
@@ -1064,9 +1064,7 @@ final class ClaudeAccountStore {
         var usedPercentage = numberValue(object["utilization"])
             ?? numberValue(object["used_percentage"])
 
-        if let percentage = usedPercentage, percentage <= 1 {
-            usedPercentage = percentage * 100
-        } else if usedPercentage == nil, let used, let limit, limit > 0 {
+        if usedPercentage == nil, let used, let limit, limit > 0 {
             usedPercentage = used / limit * 100
         }
 
