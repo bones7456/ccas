@@ -66,7 +66,7 @@ struct MenuContentView: View {
                 accountList
 
                 if !viewModel.statusText.isEmpty {
-                    Text(viewModel.statusText)
+                    Text(viewModel.statusText.redactedEmails(enabled: redactSensitive))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .lineLimit(4)
