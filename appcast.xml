@@ -6,6 +6,32 @@
         <description>Updates for Claude Code Account Switcher.</description>
         <language>en</language>
         <item>
+            <title>Version 0.4.7</title>
+            <pubDate>Tue, 02 Jun 2026 07:27:20 +0000</pubDate>
+            <sparkle:version>14</sparkle:version>
+            <sparkle:shortVersionString>0.4.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:fullReleaseNotesLink>https://github.com/bones7456/ccas/releases/tag/v0.4.7</sparkle:fullReleaseNotesLink>
+            <description>
+&lt;h2 dir="auto"&gt;Changes&lt;/h2&gt;
+&lt;ul dir="auto"&gt;
+&lt;li&gt;Fix main-actor mutation in onPreferenceChange for Swift 6.0.3 (&lt;a href="https://github.com/bones7456/ccas/commit/ec9c73a07b191decfbd464526daaabc4c5727ddd"&gt;&lt;code class="notranslate"&gt;ec9c73a&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Surface build_app.sh output in release pipeline (&lt;a href="https://github.com/bones7456/ccas/commit/090740fe9458a9059a1b7070a66fe0670f3ba587"&gt;&lt;code class="notranslate"&gt;090740f&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Bump version to 0.4.7 (build 14) (&lt;a href="https://github.com/bones7456/ccas/commit/2043881d43cf0e24e735bb6b4e0a74deb008b5bc"&gt;&lt;code class="notranslate"&gt;2043881&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Add AGENTS.md mirroring CLAUDE.md for agent tooling (&lt;a href="https://github.com/bones7456/ccas/commit/bf319142ca025a26aded39e9812a2e09ef9f6b00"&gt;&lt;code class="notranslate"&gt;bf31914&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Dedupe keychain entries by service regardless of account (&lt;a href="https://github.com/bones7456/ccas/commit/001b51e98433bbcad5dfc42141740a4de0a2f61a"&gt;&lt;code class="notranslate"&gt;001b51e&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Redact emails in status text when sensitive redaction is on (&lt;a href="https://github.com/bones7456/ccas/commit/48a4eb3ed7fa8416da02782ee5bbff8aa0dfcc4b"&gt;&lt;code class="notranslate"&gt;48a4eb3&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Don't treat unavailable quota as a successful refresh (&lt;a href="https://github.com/bones7456/ccas/commit/3282f2a61b91c5ea6c315665136f86715882fa48"&gt;&lt;code class="notranslate"&gt;3282f2a&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Treat quota utilization as already a percentage (&lt;a href="https://github.com/bones7456/ccas/commit/5f195a4269c5fab1bb0bdaa424b04463ccceb90b"&gt;&lt;code class="notranslate"&gt;5f195a4&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Fix /login loss when switching back to an account (&lt;a href="https://github.com/bones7456/ccas/commit/89faee37adfc2264c87f4455e660f40a7489f2ee"&gt;&lt;code class="notranslate"&gt;89faee3&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;Fix ScrollView height collapse on macOS 26.5 (&lt;a href="https://github.com/bones7456/ccas/commit/fe4a598f6f2d72ce333b22ace4a7204b1342e4e7"&gt;&lt;code class="notranslate"&gt;fe4a598&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p dir="auto"&gt;&lt;strong&gt;Full Changelog&lt;/strong&gt;: &lt;a class="commit-link" href="https://github.com/bones7456/ccas/compare/v0.4.6...v0.4.7"&gt;&lt;tt&gt;v0.4.6...v0.4.7&lt;/tt&gt;&lt;/a&gt;&lt;/p&gt;
+    </description>
+            <enclosure url="https://github.com/bones7456/ccas/releases/download/v0.4.7/CCAS-0.4.7.zip" sparkle:edSignature="9w9dd1QOD0uHo075GQTyGen/854tpm2nLmvLxAXv6MAoS3YoSNDVkAFFi3GSW5bEpnlAEkb5A1Tzs5I8xbxmDA==" length="2789738" type="application/octet-stream" />
+        </item>
+        <item>
             <title>Version 0.4.6</title>
             <pubDate>Mon, 25 May 2026 02:37:49 +0000</pubDate>
             <sparkle:version>13</sparkle:version>
