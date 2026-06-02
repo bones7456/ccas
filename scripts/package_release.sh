@@ -30,7 +30,10 @@ DMG_STAGE_DIR="$STAGE_DIR/dmg-stage"
 
 cd "$ROOT_DIR"
 
-"$ROOT_DIR/scripts/build_app.sh" >/dev/null
+# Don't swallow build_app.sh output — SwiftPM compile diagnostics go to
+# stdout, so redirecting it to /dev/null hides the actual error when a build
+# fails in CI. Keep the full build log visible.
+"$ROOT_DIR/scripts/build_app.sh"
 
 BUILT_APP="$DIST_DIR/CCAS.app"
 MARKETING_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$BUILT_APP/Contents/Info.plist")"
