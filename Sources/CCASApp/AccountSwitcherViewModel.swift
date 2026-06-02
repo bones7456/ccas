@@ -219,8 +219,8 @@ final class AccountSwitcherViewModel: ObservableObject {
             return
         }
 
-        run {
-            try self.store.switchToAccount(number: account.number)
+        runAsync {
+            try await self.store.switchToAccount(number: account.number)
             self.currentIdentity = try self.store.currentIdentity()
             self.accounts = try self.store.listAccounts()
             self.statusMessage = .switched(account.number)
@@ -462,6 +462,20 @@ final class AccountSwitcherViewModel: ObservableObject {
         Task {
             do {
                 try action()
+                onSuccess?()
+            } catch {
+                self.logger.error("operation failed errorType=\(String(describing: type(of: error)))")
+                statusMessage = .error(error.localizedDescription)
+            }
+            isBusy = false
+        }
+    }
+
+    private func runAsync(_ action: @escaping () async throws -> Void, onSuccess: (() -> Void)? = nil) {
+        isBusy = true
+        Task {
+            do {
+                try await action()
                 onSuccess?()
             } catch {
                 self.logger.error("operation failed errorType=\(String(describing: type(of: error)))")

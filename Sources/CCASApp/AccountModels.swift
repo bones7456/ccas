@@ -277,7 +277,9 @@ enum AccountSwitcherError: LocalizedError {
     case accountNotManaged(String)
     case missingBackupData(Int)
     case missingCredentials(Int, String)
+    case missingLiveCredentials(Int)
     case invalidBackupConfig(Int)
+    case invalidSavedCredentials(Int)
     case keychain(String)
     case fileSystem(String)
 
@@ -303,8 +305,12 @@ enum AccountSwitcherError: LocalizedError {
             return L10n.string(.errorMissingBackupData, number)
         case .missingCredentials(let number, let email):
             return L10n.string(.errorMissingCredentials, number, email)
+        case .missingLiveCredentials(let number):
+            return L10n.string(.errorMissingLiveCredentials, number)
         case .invalidBackupConfig(let number):
             return L10n.string(.errorInvalidBackupConfig, number)
+        case .invalidSavedCredentials(let number):
+            return L10n.string(.errorInvalidSavedCredentials, number)
         case .keychain(let message):
             return L10n.string(.errorKeychain, message)
         case .fileSystem(let message):

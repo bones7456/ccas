@@ -15,7 +15,6 @@ final class ClaudeAccountStore {
     private let anthropicOAuthClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
     private let anthropicOAuthBeta = "oauth-2025-04-20"
     private let claudeAIProfileScope = "user:profile"
-    private let claudeAIInferenceScope = "user:inference"
 
     init(
         fileManager: FileManager = .default,
@@ -170,7 +169,7 @@ final class ClaudeAccountStore {
         return .added(ManagedAccount(number: nextNumber, record: record, isActive: true))
     }
 
-    func switchToAccount(number: Int) throws {
+    func switchToAccount(number: Int) async throws {
         try setupDirectories()
         try migrateOrganizationFieldsIfNeeded()
 
@@ -178,6 +177,8 @@ final class ClaudeAccountStore {
             logger.error("switch account failed reason=noManagedAccounts targetNumber=\(number)")
             throw AccountSwitcherError.noManagedAccounts
         }
+
+        try await refreshStoredTargetCredentialsForSwitchIfNeeded(number: number)
 
         try FileLock(path: lockFile).withExclusiveLock {
             var data = try readSequence()
@@ -205,28 +206,44 @@ final class ClaudeAccountStore {
 
             let originalConfig = try String(contentsOf: configURL, encoding: .utf8)
 
-            // Snapshot the live credentials into the current account's backup before
+            // Snapshot usable live credentials into the current account's backup before
             // switching. Claude Code rotates refresh tokens in the background; if we
-            // only kept the stale backup, switching back later would restore an
+            // only kept the stale backup, switching back later could restore an
             // invalidated refresh token and force the user to /login again.
+            //
+            // If live credentials are already in Claude Code's transient mcpOAuth-only
+            // state, do not block switching as long as the existing current-account
+            // backup is usable. The important invariant is that we never overwrite a
+            // good backup with an unusable live blob.
             let liveCredentials = try readCurrentCredentials() ?? ""
-            guard !liveCredentials.isEmpty else {
-                logger.error("switch account failed reason=missingRollbackCredentials currentNumber=\(currentNumber)")
-                throw AccountSwitcherError.missingCredentials(currentNumber, currentIdentity.email)
-            }
-            // Bail out rather than overwrite the backup with a transient
-            // mcpOAuth-only blob (see hasUsableClaudeOAuthPayload).
-            guard hasUsableClaudeOAuthPayload(liveCredentials) else {
-                logger.error("switch account failed reason=incompleteLiveCredentials currentNumber=\(currentNumber)")
-                throw AccountSwitcherError.noClaudeCredentials
-            }
-
-            try writeAccountCredentials(
+            let currentBackupCredentials = try readAccountCredentials(
                 number: String(currentNumber),
-                email: currentIdentity.email,
-                credentials: liveCredentials
+                email: currentIdentity.email
             )
-            let rollbackCredentials = liveCredentials
+            let rollbackCredentials: String
+
+            if hasUsableClaudeOAuthPayload(liveCredentials) {
+                try writeAccountCredentials(
+                    number: String(currentNumber),
+                    email: currentIdentity.email,
+                    credentials: liveCredentials
+                )
+                rollbackCredentials = liveCredentials
+            } else {
+                guard hasUsableClaudeOAuthPayload(currentBackupCredentials) else {
+                    let reason = liveCredentials.isEmpty
+                        ? "missingRollbackCredentials"
+                        : "incompleteLiveCredentials"
+                    logger.error("switch account failed reason=\(reason) currentNumber=\(currentNumber) backupUsable=false")
+                    throw AccountSwitcherError.missingLiveCredentials(currentNumber)
+                }
+
+                let reason = liveCredentials.isEmpty
+                    ? "missingLiveCredentials"
+                    : "incompleteLiveCredentials"
+                logger.notice("switch account continuing with backup rollback reason=\(reason) currentNumber=\(currentNumber)")
+                rollbackCredentials = currentBackupCredentials
+            }
 
             var wroteCredentials = false
             var wroteConfig = false
@@ -253,9 +270,8 @@ final class ClaudeAccountStore {
                 // Surface as missingCredentials so the user knows to re-add.
                 guard hasUsableClaudeOAuthPayload(targetCredentials) else {
                     logger.error("switch account failed reason=incompleteTargetCredentials targetNumber=\(number)")
-                    throw AccountSwitcherError.missingCredentials(number, target.email)
+                    throw AccountSwitcherError.invalidSavedCredentials(number)
                 }
-
                 try writeCurrentCredentials(targetCredentials)
                 wroteCredentials = true
 
@@ -383,7 +399,7 @@ final class ClaudeAccountStore {
         let credentialsString: String
         if account.isActive {
             guard let live = try readCurrentCredentials(), !live.isEmpty else {
-                throw AccountSwitcherError.missingCredentials(account.number, account.record.email)
+                throw AccountSwitcherError.missingLiveCredentials(account.number)
             }
             credentialsString = live
         } else {
@@ -396,7 +412,13 @@ final class ClaudeAccountStore {
             }
         }
 
-        var parsed = try parseClaudeCredentials(credentialsString)
+        let initialParsed: ParsedClaudeCredentials
+        do {
+            initialParsed = try parseClaudeCredentials(credentialsString)
+        } catch QuotaFetchError.missingOAuth where account.isActive {
+            throw AccountSwitcherError.missingLiveCredentials(account.number)
+        }
+        var parsed = initialParsed
         guard parsed.oauth.scopes.contains(claudeAIProfileScope) else {
             return .unavailable(L10n.string(.quotaUnavailable))
         }
@@ -768,6 +790,93 @@ final class ClaudeAccountStore {
         logger.notice("oauth refresh done number=\(account.number)")
     }
 
+    private func refreshStoredTargetCredentialsForSwitchIfNeeded(number: Int) async throws {
+        guard let data = try readSequenceIfPresent() else {
+            logger.error("switch account failed reason=noManagedAccounts targetNumber=\(number)")
+            throw AccountSwitcherError.noManagedAccounts
+        }
+        guard let target = data.accounts[String(number)] else {
+            logger.error("switch account failed reason=accountNotFound targetNumber=\(number)")
+            throw AccountSwitcherError.accountNotFound(number)
+        }
+        guard let currentIdentity = try currentIdentity() else {
+            logger.error("switch account failed reason=noActiveClaudeAccount targetNumber=\(number)")
+            throw AccountSwitcherError.noActiveClaudeAccount
+        }
+        if managedNumber(for: currentIdentity, in: data) == number {
+            return
+        }
+
+        let credentials = try readAccountCredentials(number: String(number), email: target.email)
+        guard !credentials.isEmpty else {
+            logger.error("switch account failed reason=missingTargetCredentials targetNumber=\(number)")
+            throw AccountSwitcherError.missingCredentials(number, target.email)
+        }
+        guard hasUsableClaudeOAuthPayload(credentials) else {
+            logger.error("switch account failed reason=incompleteTargetCredentials targetNumber=\(number)")
+            throw AccountSwitcherError.invalidSavedCredentials(number)
+        }
+
+        _ = try await refreshedTargetCredentialsIfNeeded(
+            credentials,
+            number: number,
+            email: target.email
+        )
+    }
+
+    private func refreshedTargetCredentialsIfNeeded(_ credentials: String, number: Int, email: String) async throws -> String {
+        var parsed: ParsedClaudeCredentials
+        do {
+            parsed = try parseClaudeCredentials(credentials)
+        } catch {
+            logger.error("switch account target credentials parse failed targetNumber=\(number) errorType=\(String(describing: type(of: error)))")
+            throw AccountSwitcherError.invalidSavedCredentials(number)
+        }
+
+        // Only refresh when the snapshot is actually expiring. Switch-away already
+        // snapshots Claude Code's freshest live token into the backup, so a fresh
+        // token needs no refresh — and refreshing it would rotate the refresh token
+        // out from under Claude Code, which takes over this account moments later.
+        // That double-refresh is exactly what forces a /login (mirrors the
+        // active-account rule in usageInfo).
+        guard parsed.oauth.isExpiringSoon else {
+            return credentials
+        }
+
+        do {
+            try await refreshOAuthCredentials(&parsed)
+            let updatedCredentials = try encodedCredentials(from: parsed)
+            try writeAccountCredentials(
+                number: String(number),
+                email: email,
+                credentials: updatedCredentials
+            )
+            logger.notice("switch account target credentials refreshed targetNumber=\(number)")
+            return updatedCredentials
+        } catch {
+            logger.error("switch account target credentials refresh failed targetNumber=\(number) errorType=\(String(describing: type(of: error)))")
+            if parsed.oauth.isExpiringSoon && isOAuthRefreshCredentialRejection(error) {
+                throw AccountSwitcherError.invalidSavedCredentials(number)
+            }
+
+            // Keep offline switching usable when the stored access token is still
+            // fresh, but do not ignore an expired token paired with an OAuth rejection.
+            logger.notice("switch account continuing with unrefreshed target credentials targetNumber=\(number)")
+            return credentials
+        }
+    }
+
+    private func isOAuthRefreshCredentialRejection(_ error: Error) -> Bool {
+        switch error {
+        case QuotaFetchError.missingRefreshToken:
+            return true
+        case QuotaFetchError.httpStatus(let statusCode, _):
+            return [400, 401, 403].contains(statusCode)
+        default:
+            return false
+        }
+    }
+
     private func refreshOAuthCredentials(_ parsed: inout ParsedClaudeCredentials) async throws {
         guard let refreshToken = parsed.oauth.refreshToken, !refreshToken.isEmpty else {
             throw QuotaFetchError.missingRefreshToken
@@ -779,15 +888,11 @@ final class ClaudeAccountStore {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        let scopes = parsed.oauth.scopes.isEmpty
-            ? [claudeAIProfileScope, claudeAIInferenceScope, "user:sessions:claude_code", "user:mcp_servers", "user:file_upload"]
-            : parsed.oauth.scopes
         let clientID = parsed.oauth.clientID?.isEmpty == false ? parsed.oauth.clientID! : anthropicOAuthClientID
         let body: [String: String] = [
             "grant_type": "refresh_token",
             "refresh_token": refreshToken,
             "client_id": clientID,
-            "scope": scopes.joined(separator: " ")
         ]
         request.httpBody = formURLEncoded(body).data(using: .utf8)
 
@@ -821,7 +926,7 @@ final class ClaudeAccountStore {
         let newRefreshToken = stringValue(object["refresh_token"]) ?? refreshToken
         let expiresIn = numberValue(object["expires_in"]) ?? 3600
         let expiresAt = Date().addingTimeInterval(expiresIn).timeIntervalSince1970 * 1000
-        let responseScopes = scopesValue(object["scope"]) ?? scopes
+        let responseScopes = scopesValue(object["scope"]) ?? parsed.oauth.scopes
 
         parsed.oauth.accessToken = accessToken
         parsed.oauth.refreshToken = newRefreshToken

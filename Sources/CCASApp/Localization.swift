@@ -18,9 +18,11 @@ enum L10n {
         case errorFileSystem
         case errorInvalidBackupConfig
         case errorInvalidClaudeConfig
+        case errorInvalidSavedCredentials
         case errorKeychain
         case errorMissingBackupData
         case errorMissingCredentials
+        case errorMissingLiveCredentials
         case errorNoActiveClaudeAccount
         case errorNoClaudeCredentials
         case errorNoManagedAccounts
@@ -113,9 +115,11 @@ enum L10n {
         .errorFileSystem: "File operation failed: %@",
         .errorInvalidBackupConfig: "Backup config is invalid for account %d.",
         .errorInvalidClaudeConfig: "Claude Code config is not valid JSON: %@",
+        .errorInvalidSavedCredentials: "Saved credentials for Account %d are no longer valid. Sign in to that account in Claude Code, then choose Add Account to update it.",
         .errorKeychain: "Keychain operation failed: %@",
         .errorMissingBackupData: "Backup data is incomplete for account %d.",
         .errorMissingCredentials: "Account %d is missing saved credentials. Sign in as %@ in Claude Code, then choose Add Account to update it.",
+        .errorMissingLiveCredentials: "Sign in to Account %d in Claude Code, then try again.",
         .errorNoActiveClaudeAccount: "No active Claude Code account was found. Please sign in with Claude Code first.",
         .errorNoClaudeCredentials: "No Claude Code credentials were found. Please finish signing in with Claude Code first.",
         .errorNoManagedAccounts: "No accounts have been added yet.",
@@ -175,9 +179,11 @@ enum L10n {
         .errorFileSystem: "文件操作失败：%@",
         .errorInvalidBackupConfig: "账号 %d 的备份配置无效。",
         .errorInvalidClaudeConfig: "Claude Code 配置文件不是有效 JSON：%@",
+        .errorInvalidSavedCredentials: "账号 %d 的已保存凭据已失效。请先在 Claude Code 登录该账号，再点添加账号更新。",
         .errorKeychain: "Keychain 操作失败：%@",
         .errorMissingBackupData: "账号 %d 的备份数据不完整。",
         .errorMissingCredentials: "账号 %d 缺少已保存凭据。请先在 Claude Code 登录 %@，再点添加账号更新。",
+        .errorMissingLiveCredentials: "请先在 Claude Code 登录账号 %d，然后重试。",
         .errorNoActiveClaudeAccount: "没有找到当前 Claude Code 登录账号。请先在 Claude Code 登录。",
         .errorNoClaudeCredentials: "没有找到 Claude Code 凭据。请先完成 Claude Code 登录。",
         .errorNoManagedAccounts: "还没有添加任何账号。",
