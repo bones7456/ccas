@@ -6,6 +6,23 @@
         <description>Updates for Claude Code Account Switcher.</description>
         <language>en</language>
         <item>
+            <title>Version 0.4.8</title>
+            <pubDate>Thu, 04 Jun 2026 14:06:38 +0000</pubDate>
+            <sparkle:version>15</sparkle:version>
+            <sparkle:shortVersionString>0.4.8</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:fullReleaseNotesLink>https://github.com/bones7456/ccas/releases/tag/v0.4.8</sparkle:fullReleaseNotesLink>
+            <description>
+&lt;h2 dir="auto"&gt;Changes&lt;/h2&gt;
+&lt;ul dir="auto"&gt;
+&lt;li&gt;Bump version to 0.4.8 (build 15) (&lt;a href="https://github.com/bones7456/ccas/commit/320e462783065ff1953172b69c899cc578d09c63"&gt;&lt;code class="notranslate"&gt;320e462&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p dir="auto"&gt;&lt;strong&gt;Full Changelog&lt;/strong&gt;: &lt;a class="commit-link" href="https://github.com/bones7456/ccas/compare/v0.4.7...v0.4.8"&gt;&lt;tt&gt;v0.4.7...v0.4.8&lt;/tt&gt;&lt;/a&gt;&lt;/p&gt;
+    </description>
+            <enclosure url="https://github.com/bones7456/ccas/releases/download/v0.4.8/CCAS-0.4.8.zip" sparkle:edSignature="YW6/zcR+xr6GmyuasHW27xG0ROrHHWWs95/am9dvakPeMaU4GPwOxuvVuhSd3MP16ZZhEJlPwflehEaUCRimBw==" length="2789727" type="application/octet-stream" />
+        </item>
+        <item>
             <title>Version 0.4.7</title>
             <pubDate>Tue, 02 Jun 2026 07:27:20 +0000</pubDate>
             <sparkle:version>14</sparkle:version>
