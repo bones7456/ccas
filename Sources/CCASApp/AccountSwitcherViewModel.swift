@@ -59,14 +59,21 @@ enum QuotaSeverity {
 
 @MainActor
 final class AccountSwitcherViewModel: ObservableObject {
-    @Published private(set) var accounts: [ManagedAccount] = []
+    @Published private(set) var accounts: [ManagedAccount] = [] {
+        didSet { updateMarkerBlinkTimer() }
+    }
     @Published private(set) var currentIdentity: AccountIdentity?
-    @Published private(set) var quotaStates: [Int: AccountQuotaLoadState] = [:]
+    @Published private(set) var quotaStates: [Int: AccountQuotaLoadState] = [:] {
+        didSet { updateMarkerBlinkTimer() }
+    }
     @Published private(set) var isFetchingQuota = false
     @Published private(set) var lastQuotaUpdatedAt: Date?
     @Published private var statusMessage: StatusMessage = .none
     @Published var isBusy = false
     @Published private(set) var appearanceTick = false
+    /// Toggles ~once per second to blink the menu bar ring's time marker.
+    /// Only runs while the ring shows a marker and the display is awake.
+    @Published private(set) var markerBlinkOn = true
 
     private let store: ClaudeAccountStore
     nonisolated(unsafe) private var appearanceObserver: NSObjectProtocol?
@@ -76,8 +83,11 @@ final class AccountSwitcherViewModel: ObservableObject {
     private var lastQuotaSuccessAt: [Int: Date] = [:]
     private var quotaRateLimitedUntil: [Int: Date] = [:]
     private var backgroundRefreshTimer: Timer?
+    private var markerBlinkTimer: Timer?
+    private var isDisplayAsleep = false
     private static let quotaRefreshCooldown: TimeInterval = 60
     private static let backgroundRefreshInterval: TimeInterval = 300
+    private static let markerBlinkInterval: TimeInterval = 0.9
 
     init(store: ClaudeAccountStore = ClaudeAccountStore()) {
         self.store = store
@@ -108,12 +118,36 @@ final class AccountSwitcherViewModel: ObservableObject {
         activeQuotaPercent.map(QuotaSeverity.init(percent:))
     }
 
+    /// Fraction (0...1) of wall-clock time elapsed in the same window the ring
+    /// fill represents (5h for personal, billing month for monetary). Drives
+    /// the ring's blinking time marker. `nil` when no reset time is known.
+    var activeQuotaTimeMarker: Double? {
+        guard let activeAccount,
+              case .loaded(let info) = quotaStates[activeAccount.number] else {
+            return nil
+        }
+        return Self.menuBarTimeMarker(in: info)
+    }
+
     private static func menuBarPercent(in info: AccountQuotaInfo) -> Double? {
         switch info {
         case .personal(_, let fiveHour, _):
             return fiveHour?.usedPercentage
         case .monetary(_, let quota):
             return quota.usedPercentage
+        case .unavailable:
+            return nil
+        }
+    }
+
+    private static func menuBarTimeMarker(in info: AccountQuotaInfo, now: Date = Date()) -> Double? {
+        switch info {
+        case .personal(_, let fiveHour, _):
+            guard let resetsAt = fiveHour?.resetsAt else { return nil }
+            return QuotaCycle.fixed(5 * 60 * 60).elapsedFraction(resetsAt: resetsAt, now: now)
+        case .monetary(_, let quota):
+            guard let resetsAt = quota.resetsAt else { return nil }
+            return QuotaCycle.monthly.elapsedFraction(resetsAt: resetsAt, now: now)
         case .unavailable:
             return nil
         }
@@ -435,6 +469,34 @@ final class AccountSwitcherViewModel: ObservableObject {
         backgroundRefreshTimer = timer
     }
 
+    /// Starts or stops the ~1 Hz menu bar ring blink so it only re-renders the
+    /// icon when there is actually a time marker to animate and the display is
+    /// awake. When stopped, the marker is left fully visible.
+    private func updateMarkerBlinkTimer() {
+        let shouldRun = !isDisplayAsleep && activeQuotaTimeMarker != nil
+
+        guard shouldRun else {
+            markerBlinkTimer?.invalidate()
+            markerBlinkTimer = nil
+            if !markerBlinkOn {
+                markerBlinkOn = true
+            }
+            return
+        }
+
+        guard markerBlinkTimer == nil else {
+            return
+        }
+
+        let timer = Timer(timeInterval: Self.markerBlinkInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.markerBlinkOn.toggle()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        markerBlinkTimer = timer
+    }
+
     private func registerWorkspaceObservers() {
         let nc = NSWorkspace.shared.notificationCenter
         nc.addObserver(
@@ -445,6 +507,8 @@ final class AccountSwitcherViewModel: ObservableObject {
             Task { @MainActor [weak self] in
                 self?.backgroundRefreshTimer?.invalidate()
                 self?.backgroundRefreshTimer = nil
+                self?.isDisplayAsleep = true
+                self?.updateMarkerBlinkTimer()
             }
         }
         nc.addObserver(
@@ -453,6 +517,7 @@ final class AccountSwitcherViewModel: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
+                self?.isDisplayAsleep = false
                 self?.startBackgroundRefresh()
                 self?.loadQuotaInformation()
             }

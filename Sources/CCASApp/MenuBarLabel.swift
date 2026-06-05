@@ -11,26 +11,41 @@ struct MenuBarLabel: View {
     @MainActor
     private var renderedImage: NSImage {
         _ = viewModel.appearanceTick
+        _ = viewModel.markerBlinkOn
         guard let account = viewModel.activeAccount else {
             return AppAssets.menuBarIcon()
         }
         return MenuBarRingRenderer.render(
             number: account.number,
             percent: viewModel.activeQuotaPercent,
-            severity: viewModel.activeQuotaSeverity
+            severity: viewModel.activeQuotaSeverity,
+            timeMarker: viewModel.activeQuotaTimeMarker,
+            markerVisible: viewModel.markerBlinkOn
         )
     }
 }
 
 private enum MenuBarRingRenderer {
     @MainActor
-    static func render(number: Int, percent: Double?, severity: QuotaSeverity?) -> NSImage {
+    static func render(
+        number: Int,
+        percent: Double?,
+        severity: QuotaSeverity?,
+        timeMarker: Double?,
+        markerVisible: Bool
+    ) -> NSImage {
         let appearance = NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) ?? .aqua
         let scheme: ColorScheme = (appearance == .darkAqua) ? .dark : .light
 
         let renderer = ImageRenderer(content:
-            RingIcon(number: number, percent: percent, severity: severity)
-                .environment(\.colorScheme, scheme)
+            RingIcon(
+                number: number,
+                percent: percent,
+                severity: severity,
+                timeMarker: timeMarker,
+                markerVisible: markerVisible
+            )
+            .environment(\.colorScheme, scheme)
         )
         renderer.scale = max(NSScreen.main?.backingScaleFactor ?? 2.0, 2.0)
 
@@ -46,9 +61,14 @@ private struct RingIcon: View {
     let number: Int
     let percent: Double?
     let severity: QuotaSeverity?
+    var timeMarker: Double? = nil
+    var markerVisible: Bool = true
     @Environment(\.colorScheme) private var colorScheme
 
     private static let trackColor = Color.secondary.opacity(0.35)
+    // Electric cyan — vivid enough to stand out at menu bar size against the
+    // green/orange/red arc and the gray track.
+    private static let markerColor = Color(red: 0.0, green: 0.9, blue: 1.0)
 
     private var progress: Double {
         guard let percent else { return 0 }
@@ -86,11 +106,44 @@ private struct RingIcon: View {
                 .stroke(ringColor, style: StrokeStyle(lineWidth: Self.strokeWidth, lineCap: .butt))
                 .rotationEffect(.degrees(-90))
 
+            if let timeMarker {
+                RingTimeMarker(fraction: timeMarker)
+                    .stroke(Self.markerColor, style: StrokeStyle(lineWidth: 1.3, lineCap: .butt))
+                    .opacity(markerVisible ? 1.0 : 0.3)
+            }
+
             Text(label)
                 .font(.system(size: 8, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(.primary)
         }
         .frame(width: 18, height: 18)
+    }
+}
+
+/// A short radial tick crossing the ring's stroke band at the given fraction
+/// of a full turn, measured clockwise from 12 o'clock (matching the arc).
+private struct RingTimeMarker: Shape {
+    let fraction: Double
+    // Span the ring's stroke band (~6.5...9.0) so the tick sits inside it.
+    private static let innerRadius: CGFloat = 6.6
+    private static let outerRadius: CGFloat = 8.9
+
+    func path(in rect: CGRect) -> Path {
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let theta = min(max(fraction, 0), 1) * 2 * .pi
+        let sinT = sin(theta)
+        let cosT = cos(theta)
+
+        var path = Path()
+        path.move(to: CGPoint(
+            x: center.x + Self.innerRadius * sinT,
+            y: center.y - Self.innerRadius * cosT
+        ))
+        path.addLine(to: CGPoint(
+            x: center.x + Self.outerRadius * sinT,
+            y: center.y - Self.outerRadius * cosT
+        ))
+        return path
     }
 }

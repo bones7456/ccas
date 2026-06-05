@@ -174,6 +174,43 @@ struct QuotaWindow: Codable, Equatable {
     var resetsAt: Date?
 }
 
+/// The natural reset cadence of a quota window. Used to compute how much of
+/// the current cycle's wall-clock time has elapsed, which is rendered as a
+/// blinking time marker on the usage bars and the menu bar ring.
+enum QuotaCycle {
+    /// A window whose duration is a fixed interval (e.g. the 5-hour and
+    /// 7-day personal windows).
+    case fixed(TimeInterval)
+    /// A calendar-month window (monetary/enterprise billing periods), whose
+    /// length varies, so the elapsed fraction is computed against the actual
+    /// previous reset boundary.
+    case monthly
+
+    /// Fraction (0...1) of the cycle's wall-clock time that has elapsed as of
+    /// `now`, given the moment the window resets. Returns `nil` when it can't
+    /// be derived.
+    func elapsedFraction(resetsAt: Date, now: Date) -> Double? {
+        switch self {
+        case .fixed(let duration):
+            guard duration > 0 else { return nil }
+            let remaining = resetsAt.timeIntervalSince(now)
+            return Self.clamp(1 - remaining / duration)
+        case .monthly:
+            let calendar = Calendar.current
+            guard let start = calendar.date(byAdding: .month, value: -1, to: resetsAt) else {
+                return nil
+            }
+            let total = resetsAt.timeIntervalSince(start)
+            guard total > 0 else { return nil }
+            return Self.clamp(now.timeIntervalSince(start) / total)
+        }
+    }
+
+    private static func clamp(_ value: Double) -> Double {
+        min(max(value, 0), 1)
+    }
+}
+
 struct MonetaryQuota: Codable, Equatable {
     var usedMinorUnits: Double?
     var limitMinorUnits: Double?

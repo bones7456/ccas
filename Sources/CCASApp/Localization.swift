@@ -43,6 +43,7 @@ enum L10n {
         case quotaNoData
         case quotaReset
         case quotaSpent
+        case quotaTimeElapsed
         case quotaUnavailable
         case quotaUnknownPlan
         case quotaWeek
@@ -140,6 +141,7 @@ enum L10n {
         .quotaNoData: "No usage data yet",
         .quotaReset: "Resets %@",
         .quotaSpent: "%@ / %@ spent",
+        .quotaTimeElapsed: "%@ of this cycle has elapsed",
         .quotaUnavailable: "Usage unavailable",
         .quotaUnknownPlan: "Unknown",
         .quotaWeek: "Week",
@@ -204,6 +206,7 @@ enum L10n {
         .quotaNoData: "暂无额度数据",
         .quotaReset: "%@ 重置",
         .quotaSpent: "已用 %@ / %@",
+        .quotaTimeElapsed: "本周期已过去 %@",
         .quotaUnavailable: "额度不可用",
         .quotaUnknownPlan: "未知",
         .quotaWeek: "本周",

@@ -362,10 +362,18 @@ private struct AccountQuotaView: View {
         case .personal(_, let fiveHour, let sevenDay):
             VStack(alignment: .leading, spacing: 5) {
                 if let fiveHour {
-                    QuotaProgressLine(title: L10n.string(.quotaFiveHour), window: fiveHour)
+                    QuotaProgressLine(
+                        title: L10n.string(.quotaFiveHour),
+                        window: fiveHour,
+                        cycle: .fixed(5 * 60 * 60)
+                    )
                 }
                 if let sevenDay {
-                    QuotaProgressLine(title: L10n.string(.quotaWeek), window: sevenDay)
+                    QuotaProgressLine(
+                        title: L10n.string(.quotaWeek),
+                        window: sevenDay,
+                        cycle: .fixed(7 * 24 * 60 * 60)
+                    )
                 }
                 if fiveHour == nil && sevenDay == nil {
                     Text(L10n.string(.quotaNoData))
@@ -390,7 +398,10 @@ private struct AccountQuotaView: View {
 private struct QuotaBar: View {
     let value: Double
     let color: Color
+    /// Optional position (0...1) of the wall-clock time marker.
+    var timeMarker: Double? = nil
     private static let height: CGFloat = 6
+    private static let markerWidth: CGFloat = 1.5
 
     var body: some View {
         GeometryReader { geo in
@@ -399,15 +410,46 @@ private struct QuotaBar: View {
                 Capsule()
                     .fill(color)
                     .frame(width: geo.size.width * min(max(value, 0), 1))
+
+                if let timeMarker {
+                    let fraction = min(max(timeMarker, 0), 1)
+                    TimeMarkerTick(width: Self.markerWidth, height: Self.height + 4)
+                        .offset(x: (geo.size.width - Self.markerWidth) * fraction)
+                        .help(L10n.string(.quotaTimeElapsed, String(format: "%.0f%%", fraction * 100)))
+                }
             }
         }
         .frame(height: Self.height)
     }
 }
 
+/// A thin vertical line that blinks in place, marking how far the current
+/// quota cycle has progressed in wall-clock terms. Drawn over the bar so the
+/// user can compare it against actual usage — usage ahead of the marker means
+/// burning faster than time, behind it means there's headroom.
+private struct TimeMarkerTick: View {
+    let width: CGFloat
+    let height: CGFloat
+    @State private var dimmed = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: width / 2)
+            .fill(Color.primary)
+            .frame(width: width, height: height)
+            .shadow(color: Color(nsColor: .windowBackgroundColor).opacity(0.7), radius: 0.5)
+            .opacity(dimmed ? 0.2 : 0.85)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                    dimmed = true
+                }
+            }
+    }
+}
+
 private struct QuotaProgressLine: View {
     let title: String
     let window: QuotaWindow
+    let cycle: QuotaCycle
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -419,7 +461,8 @@ private struct QuotaProgressLine: View {
 
                 QuotaBar(
                     value: progressValue,
-                    color: QuotaSeverity(percent: window.usedPercentage).color
+                    color: QuotaSeverity(percent: window.usedPercentage).color,
+                    timeMarker: timeMarker
                 )
 
                 Text(percentText)
@@ -438,6 +481,11 @@ private struct QuotaProgressLine: View {
 
     private var progressValue: Double {
         min(max(window.usedPercentage / 100, 0), 1)
+    }
+
+    private var timeMarker: Double? {
+        guard let resetsAt = window.resetsAt else { return nil }
+        return cycle.elapsedFraction(resetsAt: resetsAt, now: Date())
     }
 
     private var percentText: String {
@@ -476,7 +524,8 @@ private struct MonetaryQuotaLine: View {
             if let percentage = quota.usedPercentage {
                 QuotaBar(
                     value: percentage / 100,
-                    color: QuotaSeverity(percent: percentage).color
+                    color: QuotaSeverity(percent: percentage).color,
+                    timeMarker: timeMarker
                 )
             }
 
@@ -486,6 +535,11 @@ private struct MonetaryQuotaLine: View {
                     .foregroundStyle(.tertiary)
             }
         }
+    }
+
+    private var timeMarker: Double? {
+        guard let resetsAt = quota.resetsAt else { return nil }
+        return QuotaCycle.monthly.elapsedFraction(resetsAt: resetsAt, now: Date())
     }
 
     private var spentText: String {
