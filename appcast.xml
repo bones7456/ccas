@@ -6,6 +6,23 @@
         <description>Updates for Claude Code Account Switcher.</description>
         <language>en</language>
         <item>
+            <title>Version 0.4.9</title>
+            <pubDate>Fri, 05 Jun 2026 03:37:10 +0000</pubDate>
+            <sparkle:version>16</sparkle:version>
+            <sparkle:shortVersionString>0.4.9</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:fullReleaseNotesLink>https://github.com/bones7456/ccas/releases/tag/v0.4.9</sparkle:fullReleaseNotesLink>
+            <description>
+&lt;h2 dir="auto"&gt;Changes&lt;/h2&gt;
+&lt;ul dir="auto"&gt;
+&lt;li&gt;Add quota cycle time marker to progress bars and menu bar ring (0.4.9, build 16) (&lt;a href="https://github.com/bones7456/ccas/commit/30a890297f98b15f9c8820811c02b2400026bcec"&gt;&lt;code class="notranslate"&gt;30a8902&lt;/code&gt;&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p dir="auto"&gt;&lt;strong&gt;Full Changelog&lt;/strong&gt;: &lt;a class="commit-link" href="https://github.com/bones7456/ccas/compare/v0.4.8...v0.4.9"&gt;&lt;tt&gt;v0.4.8...v0.4.9&lt;/tt&gt;&lt;/a&gt;&lt;/p&gt;
+    </description>
+            <enclosure url="https://github.com/bones7456/ccas/releases/download/v0.4.9/CCAS-0.4.9.zip" sparkle:edSignature="4qWVwQeSLPDVMLlS4MJqAT2aCvgFuH2i0GpG5oK1ZhukIM+S5fqeoh9liy0bxZ8YWLCnBrNRmvbRntu4oPEyAA==" length="2803358" type="application/octet-stream" />
+        </item>
+        <item>
             <title>Version 0.4.8</title>
             <pubDate>Thu, 04 Jun 2026 14:06:38 +0000</pubDate>
             <sparkle:version>15</sparkle:version>
