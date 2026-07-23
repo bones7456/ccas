@@ -2,6 +2,9 @@
 
 [Simplified Chinese](README_ZH.md)
 
+> **⚠️ This project is deprecated and no longer maintained.**
+> CCAS works by reaching into Claude Code's local config file and Keychain item from the outside — an undocumented, unofficial integration point. Anthropic can change that behavior at any time without notice, and I no longer have the bandwidth to continuously track and test against those changes. Use at your own risk; no further updates should be expected.
+
 CCAS, short for Claude Code Account Switcher, is a native macOS menu bar app for switching between multiple Claude Code accounts.
 
 It keeps a small icon in the menu bar. Click the icon, add the Claude Code account that is currently signed in, then select any saved account to switch Claude Code to that identity.

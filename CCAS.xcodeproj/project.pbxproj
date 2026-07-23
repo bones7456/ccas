@@ -20,6 +20,7 @@
 		996AACB6383C3AAAC8D9ECBC /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = C6BB9E061BAE27BF48E03A39 /* AppIcon.png */; };
 		A299EC3E2FC2F74E00D868F4 /* MenuBarLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A299EC3D2FC2F74E00D868F4 /* MenuBarLabel.swift */; };
 		BA201F353F4CD05560617372 /* KeychainClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFB2F3AB133F03C0BBC5531 /* KeychainClient.swift */; };
+		CCA5000010000000000000A1 /* ClaudeProcessDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5000010000000000000A2 /* ClaudeProcessDetector.swift */; };
 		D2BDA721FBF4254A159EC4A0 /* MenuContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AFC3F8BFD3587A1E8A829CD /* MenuContentView.swift */; };
 		E3A89246EA5DC02B336EF637 /* AppAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E4B5C3CADFF9F9627F2E4B /* AppAssets.swift */; };
 		F5A100001000000000000001 /* UpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A100001000000000000002 /* UpdateController.swift */; };
@@ -28,6 +29,7 @@
 
 /* Begin PBXFileReference section */
 		0FFB2F3AB133F03C0BBC5531 /* KeychainClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeychainClient.swift; sourceTree = "<group>"; };
+		CCA5000010000000000000A2 /* ClaudeProcessDetector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeProcessDetector.swift; sourceTree = "<group>"; };
 		11C0D2AFEF110A7015C952BA /* MenuBarIconAlternateTemplate.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = MenuBarIconAlternateTemplate.png; sourceTree = "<group>"; };
 		251272FE1C242F79EEBC316F /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		27D8DA95F48C70FC556484B6 /* MenuBarIconTemplate.png */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = image.png; path = MenuBarIconTemplate.png; sourceTree = "<group>"; };
@@ -116,6 +118,7 @@
 				E2E09256BDA0355EF9617953 /* ClaudeAccountStore.swift */,
 				6CD128EEDB27B99770BF239D /* FileLock.swift */,
 				0FFB2F3AB133F03C0BBC5531 /* KeychainClient.swift */,
+				CCA5000010000000000000A2 /* ClaudeProcessDetector.swift */,
 				4FF22FE85744B125BA1E8E91 /* Localization.swift */,
 				2AFC3F8BFD3587A1E8A829CD /* MenuContentView.swift */,
 				F5A100001000000000000002 /* UpdateController.swift */,
@@ -211,6 +214,7 @@
 				1FFD8601D00F7619C25C8F08 /* ClaudeAccountStore.swift in Sources */,
 				1C2F90FFC2E7926472C5ADF0 /* FileLock.swift in Sources */,
 				BA201F353F4CD05560617372 /* KeychainClient.swift in Sources */,
+				CCA5000010000000000000A1 /* ClaudeProcessDetector.swift in Sources */,
 				A299EC3E2FC2F74E00D868F4 /* MenuBarLabel.swift in Sources */,
 				31F3547CE747635DECE6C9B9 /* Localization.swift in Sources */,
 				D2BDA721FBF4254A159EC4A0 /* MenuContentView.swift in Sources */,

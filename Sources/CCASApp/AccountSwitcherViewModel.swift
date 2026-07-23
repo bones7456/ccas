@@ -9,6 +9,7 @@ enum StatusMessage: Equatable {
     case added(Int)
     case updatedExisting(Int)
     case switched(Int)
+    case switchedWhileRunning(number: Int, runningInstances: Int)
     case removed(Int)
     case purged
     case error(String)
@@ -27,6 +28,8 @@ enum StatusMessage: Equatable {
             return L10n.string(.statusUpdatedExistingAccount, number)
         case .switched(let number):
             return L10n.string(.statusSwitchedAccount, number)
+        case .switchedWhileRunning(let number, let runningInstances):
+            return L10n.string(.statusSwitchedAccountWhileRunning, number, runningInstances)
         case .removed(let number):
             return L10n.string(.statusRemovedAccount, number)
         case .purged:
@@ -257,7 +260,13 @@ final class AccountSwitcherViewModel: ObservableObject {
             try await self.store.switchToAccount(number: account.number)
             self.currentIdentity = try self.store.currentIdentity()
             self.accounts = try self.store.listAccounts()
-            self.statusMessage = .switched(account.number)
+            // A live Claude Code session keeps billing the old account until it
+            // restarts (it holds the OAuth token in memory and never re-reads
+            // the Keychain mid-task), so warn when any instance is still up.
+            let running = self.store.runningClaudeInstanceCount()
+            self.statusMessage = running > 0
+                ? .switchedWhileRunning(number: account.number, runningInstances: running)
+                : .switched(account.number)
         } onSuccess: {
             self.loadQuotaInformation()
         }

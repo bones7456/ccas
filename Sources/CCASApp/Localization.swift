@@ -62,6 +62,7 @@ enum L10n {
         case statusPurged
         case statusRemovedAccount
         case statusSwitchedAccount
+        case statusSwitchedAccountWhileRunning
         case statusUpdatedExistingAccount
         case switchToAccount
     }
@@ -159,7 +160,8 @@ enum L10n {
         .statusAddedAccount: "Added account %d",
         .statusPurged: "All CCAS data has been removed.",
         .statusRemovedAccount: "Removed account %d",
-        .statusSwitchedAccount: "Switched to account %d. Restart Claude Code to use it.",
+        .statusSwitchedAccount: "Switched to account %d. New Claude Code sessions will use it.",
+        .statusSwitchedAccountWhileRunning: "Switched to account %d, but %d running Claude Code session(s) still bill the old account — restart them to apply.",
         .statusUpdatedExistingAccount: "Still detected account %d. Backup updated; no new account was added.",
         .switchToAccount: "Switch to this account"
     ]
@@ -224,7 +226,8 @@ enum L10n {
         .statusAddedAccount: "已添加账号 %d",
         .statusPurged: "已清除所有 CCAS 数据",
         .statusRemovedAccount: "已删除账号 %d",
-        .statusSwitchedAccount: "已切换到账号 %d，请重启 Claude Code",
+        .statusSwitchedAccount: "已切换到账号 %d，新启动的 Claude Code 会话将使用它",
+        .statusSwitchedAccountWhileRunning: "已切换到账号 %d，但有 %d 个运行中的 Claude Code 会话仍按旧账号计费，需重启它们才生效",
         .statusUpdatedExistingAccount: "检测到的仍是账号 %d，已更新备份；没有新增账号",
         .switchToAccount: "切换到该账号"
     ]

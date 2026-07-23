@@ -126,6 +126,7 @@ struct MenuContentView: View {
             }
         }
         .background(MenuBackgroundView())
+        .background(MenuWindowResizer())
         .id(languageRevision)
         .animation(.easeInOut(duration: 0.12), value: confirmation)
         .onAppear {
@@ -577,6 +578,41 @@ private struct MonetaryQuotaLine: View {
         formatter.timeStyle = .short
         return formatter
     }()
+}
+
+/// Forces the `MenuBarExtra(.window)` popover window to track its SwiftUI
+/// content height. The window grows to fit content but never shrinks on its
+/// own, so when a row collapses (e.g. a quota progress bar disappears and the
+/// account falls back to a one-line "Usage unavailable") the window keeps its
+/// taller size and the plain window background shows through below the menu
+/// material. Resize the window down to the content's fitting size, keeping the
+/// top edge anchored under the menu bar.
+private struct MenuWindowResizer: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        NSView(frame: .zero)
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            guard let window = nsView.window, let content = window.contentView else { return }
+
+            let target = content.fittingSize
+            let currentContentHeight = window.contentRect(forFrameRect: window.frame).height
+            guard target.height > 1, abs(currentContentHeight - target.height) > 0.5 else { return }
+
+            let newContentRect = NSRect(
+                origin: .zero,
+                size: NSSize(width: window.contentRect(forFrameRect: window.frame).width, height: target.height)
+            )
+            let newFrameSize = window.frameRect(forContentRect: newContentRect).size
+
+            var frame = window.frame
+            let top = frame.maxY
+            frame.size.height = newFrameSize.height
+            frame.origin.y = top - newFrameSize.height
+            window.setFrame(frame, display: true)
+        }
+    }
 }
 
 private struct MenuBackgroundView: NSViewRepresentable {

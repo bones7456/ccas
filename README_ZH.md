@@ -2,6 +2,9 @@
 
 [English](README.md)
 
+> **⚠️ 本项目已废弃，不再维护。**
+> CCAS 采用外挂形式侵入 Claude Code 本地配置文件和 Keychain 凭据的方式实现账号切换，这是一个不文档化、非官方支持的集成方式。Claude Code 的行为随时可能变更且不会提前通知，我也没有精力持续跟进和测试这些变化。请自行评估风险后使用，后续不保证会有更新。
+
 CCAS 是 Claude Code Account Switcher 的缩写，是一个原生 macOS 菜单栏应用，用于在多个 Claude Code 账号之间快速切换。
 
 它会常驻在右上角菜单栏。点击图标后，可以添加当前 Claude Code 已登录的账号，也可以从已保存的账号列表中选择目标账号进行切换。

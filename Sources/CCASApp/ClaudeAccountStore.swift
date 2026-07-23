@@ -6,6 +6,7 @@ final class ClaudeAccountStore {
     private let fileManager: FileManager
     private let keychain: KeychainClient
     private let home: URL
+    private let processDetector: ClaudeProcessDetector
     private let logger = DebugLogger(category: "AccountStore")
 
     private let claudeCredentialsService = "Claude Code-credentials"
@@ -24,6 +25,14 @@ final class ClaudeAccountStore {
         self.fileManager = fileManager
         self.keychain = keychain
         self.home = home
+        self.processDetector = ClaudeProcessDetector(fileManager: fileManager, home: home)
+    }
+
+    /// Count of Claude Code instances currently running. A switch does not
+    /// change the account a live session bills until that session restarts, so
+    /// the UI uses this to warn after a switch.
+    func runningClaudeInstanceCount() -> Int {
+        processDetector.runningInstanceCount()
     }
 
     var backupDirectory: URL {
