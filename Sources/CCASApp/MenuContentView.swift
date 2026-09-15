@@ -14,6 +14,7 @@ struct MenuContentView: View {
     @State private var quotaClock = Date()
     @State private var confirmation: PendingConfirmation?
     @State private var accountListHeight: CGFloat = 100
+    @State private var isPanelVisible = false
 
     var body: some View {
         ZStack {
@@ -58,6 +59,10 @@ struct MenuContentView: View {
                     .disabled(viewModel.isBusy || viewModel.isFetchingQuota)
                 }
                 .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
+                    // Only the visible panel shows the quota age, and writing
+                    // this @State invalidates the whole menu tree — which stays
+                    // alive after the popover closes. See MenuVisibilityReporter.
+                    guard isPanelVisible else { return }
                     quotaClock = date
                 }
 
@@ -127,6 +132,8 @@ struct MenuContentView: View {
         }
         .background(MenuBackgroundView())
         .background(MenuWindowResizer())
+        .background(MenuVisibilityReporter { isPanelVisible = $0 })
+        .environment(\.markerBlinkOn, isPanelVisible ? viewModel.markerBlinkOn : true)
         .id(languageRevision)
         .animation(.easeInOut(duration: 0.12), value: confirmation)
         .onAppear {
@@ -237,7 +244,18 @@ struct MenuContentView: View {
             .onPreferenceChange(AccountListHeightKey.self) { height in
                 // onPreferenceChange's closure is @Sendable under the Xcode 16.2
                 // SDK, so hop to the main actor before mutating @State.
-                Task { @MainActor in accountListHeight = height }
+                //
+                // Quantize and dedupe before writing back: this value feeds
+                // the `.frame(height:)` above, and the hop puts the write
+                // outside SwiftUI's current update transaction, so sub-pixel
+                // jitter in the measured height would be enough to keep
+                // re-triggering layout. Defensive — not a hot path today.
+                Task { @MainActor in
+                    let quantized = height.rounded()
+                    if abs(accountListHeight - quantized) > 0.5 {
+                        accountListHeight = quantized
+                    }
+                }
             }
         }
     }
@@ -424,26 +442,42 @@ private struct QuotaBar: View {
     }
 }
 
+/// Carries `AccountSwitcherViewModel.markerBlinkOn` down to `TimeMarkerTick`
+/// without threading the view model through every quota subview.
+private struct MarkerBlinkOnKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
+extension EnvironmentValues {
+    var markerBlinkOn: Bool {
+        get { self[MarkerBlinkOnKey.self] }
+        set { self[MarkerBlinkOnKey.self] = newValue }
+    }
+}
+
 /// A thin vertical line that blinks in place, marking how far the current
 /// quota cycle has progressed in wall-clock terms. Drawn over the bar so the
 /// user can compare it against actual usage — usage ahead of the marker means
 /// burning faster than time, behind it means there's headroom.
+///
+/// The blink is a discrete toggle driven by the view model's ~1 Hz timer, not a
+/// SwiftUI animation. A `.repeatForever` animation here never ends, and under
+/// `.menuBarExtraStyle(.window)` this view tree outlives the popover — so the
+/// animation kept driving a full ViewGraph re-evaluation and display-list
+/// re-render of the whole menu at the display refresh rate, forever, even with
+/// the panel closed. That alone cost ~15% CPU. Keep this free of any animation
+/// that does not come to rest.
 private struct TimeMarkerTick: View {
     let width: CGFloat
     let height: CGFloat
-    @State private var dimmed = false
+    @Environment(\.markerBlinkOn) private var blinkOn
 
     var body: some View {
         RoundedRectangle(cornerRadius: width / 2)
             .fill(Color.primary)
             .frame(width: width, height: height)
             .shadow(color: Color(nsColor: .windowBackgroundColor).opacity(0.7), radius: 0.5)
-            .opacity(dimmed ? 0.2 : 0.85)
-            .onAppear {
-                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
-                    dimmed = true
-                }
-            }
+            .opacity(blinkOn ? 0.85 : 0.2)
     }
 }
 
@@ -594,7 +628,13 @@ private struct MenuWindowResizer: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         DispatchQueue.main.async {
-            guard let window = nsView.window, let content = window.contentView else { return }
+            // `fittingSize` is a full layout pass over the window's content, and
+            // this runs on every update of the view tree. Under
+            // `.menuBarExtraStyle(.window)` that tree outlives the popover, so
+            // without the `isVisible` guard every background tick pays for a
+            // layout of a window that is not on screen.
+            guard let window = nsView.window, window.isVisible,
+                  let content = window.contentView else { return }
 
             let target = content.fittingSize
             let currentContentHeight = window.contentRect(forFrameRect: window.frame).height
@@ -611,6 +651,55 @@ private struct MenuWindowResizer: NSViewRepresentable {
             frame.size.height = newFrameSize.height
             frame.origin.y = top - newFrameSize.height
             window.setFrame(frame, display: true)
+        }
+    }
+}
+
+/// Reports whether the MenuBarExtra panel is actually on screen.
+///
+/// `.menuBarExtraStyle(.window)` keeps this view tree alive after the popover is
+/// dismissed, so anything periodic in the menu has to stop itself — otherwise it
+/// burns CPU around the clock updating a panel nobody is looking at.
+private struct MenuVisibilityReporter: NSViewRepresentable {
+    let onChange: (Bool) -> Void
+
+    func makeNSView(context: Context) -> WindowVisibilityView {
+        let view = WindowVisibilityView(frame: .zero)
+        view.onChange = onChange
+        return view
+    }
+
+    func updateNSView(_ nsView: WindowVisibilityView, context: Context) {
+        nsView.onChange = onChange
+    }
+
+    final class WindowVisibilityView: NSView {
+        var onChange: ((Bool) -> Void)?
+        private var observation: NSKeyValueObservation?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            observation = nil
+
+            guard let window else {
+                report(false)
+                return
+            }
+
+            report(window.isVisible)
+            // KVO calls back in a nonisolated context, so hop to the main
+            // actor rather than touching the view from there.
+            observation = window.observe(\.isVisible, options: [.new]) { [weak self] _, change in
+                guard let isVisible = change.newValue else { return }
+                Task { @MainActor [weak self] in self?.report(isVisible) }
+            }
+        }
+
+        /// Hop off the current turn of the run loop: this also fires from AppKit
+        /// during view installation, and the handler mutates SwiftUI `@State`.
+        private func report(_ isVisible: Bool) {
+            let handler = onChange
+            Task { @MainActor in handler?(isVisible) }
         }
     }
 }

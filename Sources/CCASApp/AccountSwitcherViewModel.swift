@@ -90,7 +90,7 @@ final class AccountSwitcherViewModel: ObservableObject {
     private var isDisplayAsleep = false
     private static let quotaRefreshCooldown: TimeInterval = 60
     private static let backgroundRefreshInterval: TimeInterval = 300
-    private static let markerBlinkInterval: TimeInterval = 0.9
+    private static let markerBlinkInterval: TimeInterval = 1
 
     init(store: ClaudeAccountStore = ClaudeAccountStore()) {
         self.store = store
@@ -98,6 +98,14 @@ final class AccountSwitcherViewModel: ObservableObject {
         registerWorkspaceObservers()
         registerAppearanceObserver()
         startBackgroundRefresh()
+
+        // Populate the ring at launch instead of waiting for the user to open
+        // the menu. `accounts` stays empty until something calls `refresh()`,
+        // and with no active account there is no quota, no time marker, and no
+        // blink — so without this the menu bar sits on the fallback icon until
+        // the first time the popover is opened. The cached quota loaded above
+        // lights the ring up immediately; the network fetch then corrects it.
+        refresh()
     }
 
     deinit {
@@ -478,7 +486,7 @@ final class AccountSwitcherViewModel: ObservableObject {
         backgroundRefreshTimer = timer
     }
 
-    /// Starts or stops the ~1 Hz menu bar ring blink so it only re-renders the
+    /// Starts or stops the 1 Hz menu bar ring blink so it only re-renders the
     /// icon when there is actually a time marker to animate and the display is
     /// awake. When stopped, the marker is left fully visible.
     private func updateMarkerBlinkTimer() {

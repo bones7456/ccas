@@ -26,6 +26,33 @@ struct MenuBarLabel: View {
 }
 
 private enum MenuBarRingRenderer {
+    /// The blink alternates between two otherwise identical icons once a second,
+    /// while everything behind the icon moves on the order of minutes: quota is
+    /// cached for 60s, and the time marker creeps around the ring at roughly one
+    /// pixel every three minutes. So a render is almost always a repeat of one
+    /// we just did — memoize it. That skips the `ImageRenderer` pass, and
+    /// handing back the *same* `NSImage` instance lets Core Animation reuse its
+    /// rasterized copy instead of preparing a new one on every blink.
+    private struct Key: Hashable {
+        let number: Int
+        /// Percent in half-percent steps and the marker fraction in 1/200ths.
+        /// Both are finer than a pixel on an 18pt ring, so quantizing is
+        /// invisible — but without it a value that drifts continuously with the
+        /// wall clock would miss the cache every single second.
+        let percentSteps: Int?
+        let severity: QuotaSeverity?
+        let markerSteps: Int?
+        let markerVisible: Bool
+        let isDark: Bool
+        let scale: CGFloat
+    }
+
+    /// Only two keys are hot at a time — marker shown and marker hidden.
+    /// Anything past that is drift, so drop the table wholesale rather than let
+    /// it grow for the life of the process.
+    private static let cacheLimit = 8
+    @MainActor private static var cache: [Key: NSImage] = [:]
+
     @MainActor
     static func render(
         number: Int,
@@ -36,23 +63,51 @@ private enum MenuBarRingRenderer {
     ) -> NSImage {
         let appearance = NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) ?? .aqua
         let scheme: ColorScheme = (appearance == .darkAqua) ? .dark : .light
+        let scale = max(NSScreen.main?.backingScaleFactor ?? 2.0, 2.0)
 
+        // `Int(_: Double)` traps on a non-finite value, and these come from
+        // arithmetic over API-supplied dates — clamp rather than trust them.
+        let key = Key(
+            number: number,
+            percentSteps: percent.flatMap { p in
+                p.isFinite ? Int((min(max(p, 0), 100) * 2).rounded()) : nil
+            },
+            severity: severity,
+            markerSteps: timeMarker.flatMap { m in
+                m.isFinite ? Int((min(max(m, 0), 1) * 200).rounded()) : nil
+            },
+            markerVisible: markerVisible,
+            isDark: scheme == .dark,
+            scale: scale
+        )
+
+        if let cached = cache[key] {
+            return cached
+        }
+
+        // Draw the quantized values, not the raw ones, so the image on screen is
+        // always exactly what the key describes.
         let renderer = ImageRenderer(content:
             RingIcon(
                 number: number,
-                percent: percent,
+                percent: key.percentSteps.map { Double($0) / 2 },
                 severity: severity,
-                timeMarker: timeMarker,
+                timeMarker: key.markerSteps.map { Double($0) / 200 },
                 markerVisible: markerVisible
             )
             .environment(\.colorScheme, scheme)
         )
-        renderer.scale = max(NSScreen.main?.backingScaleFactor ?? 2.0, 2.0)
+        renderer.scale = scale
 
         guard let image = renderer.nsImage else {
             return NSImage(size: NSSize(width: 18, height: 18))
         }
         image.isTemplate = false
+
+        if cache.count >= cacheLimit {
+            cache.removeAll(keepingCapacity: true)
+        }
+        cache[key] = image
         return image
     }
 }
